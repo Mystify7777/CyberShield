@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ShieldAlert,
@@ -98,77 +99,91 @@ const forumAccessCards = [
 
 export default function Home() {
   const navigate = useNavigate();
+  const [quickCheckText, setQuickCheckText] = useState("");
+
+  const handleQuickAnalyze = () => {
+    const trimmed = quickCheckText.trim();
+    if (!trimmed) {
+      navigate("/ai");
+      return;
+    }
+
+    navigate(`/ai?text=${encodeURIComponent(trimmed)}`);
+  };
 
   return (
     <PublicLayout>
-      <section className="relative overflow-hidden bg-gradient-to-br from-white via-blue-50 to-blue-200 px-6 py-20 md:py-28">
-        <div className="pointer-events-none absolute -top-24 -left-20 h-72 w-72 rounded-full bg-blue-200/70 blur-3xl animate-float" />
-        <div className="pointer-events-none absolute -bottom-24 -right-20 h-80 w-80 rounded-full bg-sky-200/60 blur-3xl animate-float" style={{ animationDelay: "1.2s" }} />
-
-        <div className="relative container-page grid lg:grid-cols-2 gap-10 items-center">
-          <div className="animate-fade-up">
-            <p className="uppercase tracking-[0.24em] text-blue-700 text-xs mb-4 font-semibold">
-              Cybersecurity Made Simple
+      <section className="bg-[#dbe6f5] py-14 sm:py-16 lg:py-20">
+        <div className="container-page grid items-start gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10">
+          <div className="max-w-2xl animate-fade-up">
+            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.24em] text-blue-700">
+              AI-Powered Threat Reporting
             </p>
-            <h1 className="text-4xl md:text-6xl font-black leading-tight text-slate-900 mb-5">
-              CyberShield
+            <h1 className="mb-4 text-5xl font-black leading-[0.95] tracking-tight text-slate-900 sm:text-6xl">
+              Detect Scams
+              <br />
+              Early. Report
+              <br />
+              Incidents Fast.
             </h1>
-            <p className="text-slate-700 md:text-lg leading-relaxed max-w-2xl">
-              A practical cybersecurity platform to report phishing, scam, and account-compromise incidents,
-              triage suspicious messages with AI, and follow trusted response playbooks before threats escalate.
+            <p className="max-w-xl text-xl leading-relaxed text-slate-600">
+              CyberShield helps you verify suspicious messages, understand risk signals, and take immediate action with structured incident reporting and practical awareness guidance.
             </p>
 
-            <div className="mt-5 flex flex-wrap gap-2 text-xs sm:text-sm">
+            <div className="mt-5 flex flex-wrap gap-2 text-sm">
               {[
-                "Phishing and scam detection",
-                "Evidence-backed incident reports",
-                "Community threat awareness",
+                "Main loop: Detect -> Explain -> Report",
+                "Evidence-backed reporting",
+                "Actionable security guidance"
               ].map((signal) => (
-                <span key={signal} className="rounded-full border border-blue-200 bg-white/80 px-3 py-1 font-medium text-blue-800">
+                <span key={signal} className="rounded-full border border-blue-300 bg-blue-50/60 px-3 py-1 font-semibold text-blue-700">
                   {signal}
                 </span>
               ))}
             </div>
 
-            <div className="mt-8 flex flex-wrap gap-3">
-              <button className="btn btn-primary animate-fade-up" style={{ animationDelay: "120ms" }} onClick={() => navigate("/login")}>
-                Get Started
-              </button>
-              <button className="btn btn-secondary animate-fade-up" style={{ animationDelay: "220ms" }} onClick={() => navigate("/ai")}>
-                Try AI Detector
-              </button>
-              <button
-                className="px-1 py-2 text-sm font-semibold text-blue-700 hover:text-blue-900 transition-colors animate-fade-up"
-                style={{ animationDelay: "320ms" }}
-                onClick={() => navigate("/articles")}
-              >
-                Explore Knowledge Hub
-              </button>
+            <div className="mt-8">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-blue-700">Quick Check</p>
+              <textarea
+                className="h-24 w-full rounded-xl border border-blue-200 bg-white px-4 py-3 text-base text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Paste suspicious message, email text, or URL to analyze"
+                value={quickCheckText}
+                onChange={(event) => setQuickCheckText(event.target.value)}
+              />
+
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button className="rounded-xl bg-blue-600 px-5 py-3 text-lg font-semibold text-white shadow-sm transition-all duration-200 hover:bg-blue-700 active:scale-95" onClick={handleQuickAnalyze}>
+                  Analyze Suspicious Message
+                </button>
+                <button className="rounded-xl bg-slate-700 px-5 py-3 text-lg font-semibold text-white shadow-sm transition-all duration-200 hover:bg-slate-800 active:scale-95" onClick={() => navigate("/create-report")}>
+                  Report Incident
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="grid gap-4 animate-fade-in" style={{ animationDelay: "180ms" }}>
-            <div className="rounded-2xl border border-blue-100 bg-white/90 shadow-sm p-5 animate-fade-up" style={{ animationDelay: "220ms" }}>
-              <p className="text-xs uppercase tracking-wide text-blue-600 mb-1">Step 1</p>
-              <h3 className="font-bold text-slate-900">Use Public Tools</h3>
-              <p className="text-sm text-slate-600 mt-1">
-                Start with AI Scam Detector and Knowledge Hub to scan links, SMS, and social messages without login.
+          <div className="grid gap-4 pt-2 animate-fade-in" style={{ animationDelay: "150ms" }}>
+            <div className="rounded-2xl border border-blue-200 bg-white/80 p-5 shadow-sm">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-blue-600">Step 1</p>
+              <h3 className="text-2xl font-bold text-slate-800">Analyze Suspicious Text</h3>
+              <p className="mt-1 text-base leading-relaxed text-slate-600">
+                Paste a suspicious message into AI Detector to get a threat label and confidence.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-blue-100 bg-white/90 shadow-sm p-5 animate-fade-up" style={{ animationDelay: "320ms" }}>
-              <p className="text-xs uppercase tracking-wide text-blue-600 mb-1">Step 2</p>
-              <h3 className="font-bold text-slate-900">Register and Verify</h3>
-              <p className="text-sm text-slate-600 mt-1">
-                Create an account, complete OTP verification, and unlock secure report tracking and updates.
+            <div className="rounded-2xl border border-blue-200 bg-white/80 p-5 shadow-sm">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-blue-600">Step 2</p>
+              <h3 className="text-2xl font-bold text-slate-800">Review Action Guidance</h3>
+              <p className="mt-1 text-base leading-relaxed text-slate-600">
+                Use result guidance to avoid risky actions and capture relevant evidence.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-blue-100 bg-white/90 shadow-sm p-5 animate-fade-up" style={{ animationDelay: "420ms" }}>
-              <p className="text-xs uppercase tracking-wide text-blue-600 mb-1">Step 3</p>
-              <h3 className="font-bold text-slate-900">Report, Track, and Collaborate</h3>
-              <p className="text-sm text-slate-600 mt-1">
-                Submit incidents with screenshots or links, monitor moderation status, and share prevention tips.
+            <div className="rounded-2xl border border-blue-200 bg-white/80 p-5 shadow-sm">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-blue-600">Step 3</p>
+              <h3 className="text-2xl font-bold text-slate-800">Report and Track</h3>
+              <p className="mt-1 text-base leading-relaxed text-slate-600">
+                Submit incidents and follow report status from your account dashboard.
               </p>
             </div>
           </div>

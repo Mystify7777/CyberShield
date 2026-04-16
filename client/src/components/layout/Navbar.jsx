@@ -63,9 +63,11 @@ export default function Navbar() {
   }, []);
 
   const publicLinks = [
-    { label: "Scam Detector", path: "/ai" },
-    { label: "Articles", path: "/articles" },
-    { label: "Forum", path: "/forum" }
+    { label: "Core", path: "/ai" },
+    { label: "Learn", path: "/articles" },
+    { label: "Community", path: "/forum" },
+    { label: "Account", path: "/login" },
+    { label: "Admin", path: "/login" }
   ];
 
   const signedInLinks = [
@@ -74,27 +76,26 @@ export default function Navbar() {
   ];
 
   return (
-    <header ref={navRef} className="sticky top-0 z-40 bg-white/90 shadow-md dark:bg-neutral-900/90 backdrop-blur-xl transition-colors ring-1 ring-neutral-200/70 dark:ring-neutral-700/70">
-      <div className="container-page py-3 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
+    <header ref={navRef} className="sticky top-0 z-40 bg-white/95 shadow-sm dark:bg-neutral-900/95 backdrop-blur-xl transition-colors ring-1 ring-neutral-200/70 dark:ring-neutral-700/70">
+      <div className="container-page py-2 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
         <button
           onClick={() => navigate("/")}
-          className="text-xl font-bold text-primary-700 dark:text-primary-100 text-center sm:text-left transition-all duration-200 hover:opacity-90 hover:-translate-y-px"
+          className="text-3xl font-bold text-primary-700 dark:text-primary-100 text-center sm:text-left transition-all duration-200 hover:opacity-90 hover:-translate-y-px"
         >
           CyberShield
         </button>
 
         {!user ? (
-          <div className="w-full sm:w-auto flex flex-wrap items-center justify-center sm:justify-end gap-2 sm:gap-3 text-sm">
+          <div className="w-full sm:w-auto flex flex-wrap items-center justify-center sm:justify-end gap-4 text-sm">
             {publicLinks.map((item) => (
-              <button key={item.path} onClick={() => navigate(item.path)} className={linkClass(isActivePath(item.path))}>
-                <span className="inline-flex items-center gap-2">
-                  {item.label}
-                  {isActivePath(item.path) && <span className="h-2 w-2 rounded-full bg-primary-500" aria-hidden="true" />}
-                </span>
+              <button
+                key={`${item.label}-${item.path}`}
+                onClick={() => navigate(item.path)}
+                className="text-slate-600 transition-colors duration-200 hover:text-blue-600"
+              >
+                {item.label}
               </button>
             ))}
-            <button onClick={() => navigate("/login")} className={linkClass(isActivePath("/login"))}>Login</button>
-            <button onClick={() => navigate("/register")} className="btn btn-primary text-sm">Get Started</button>
           </div>
         ) : (
           <div className="w-full sm:w-auto flex flex-wrap items-center justify-center sm:justify-end gap-2 sm:gap-3 text-sm">
