@@ -56,11 +56,11 @@ export default function MemeModeration() {
                 <img
                   src={`${API_HOST}${meme.image}`}
                   alt={meme.caption || "Flagged meme"}
-                  className="w-full h-72 object-cover rounded mb-3"
+                  className="w-full h-72 object-cover rounded-sm mb-3"
                 />
 
                 <div className="flex items-center justify-between gap-2">
-                  <span className="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-700">
+                  <span className="px-2 py-1 rounded-sm text-xs font-semibold bg-red-100 text-red-700">
                     FLAGGED
                   </span>
                   <span className="text-xs text-gray-400">
@@ -68,7 +68,7 @@ export default function MemeModeration() {
                   </span>
                 </div>
 
-                <p className="font-medium break-words">{meme.caption}</p>
+                <p className="font-medium wrap-break-word">{meme.caption}</p>
                 <p className="text-sm text-gray-500 mt-1">{meme.category}</p>
                 {meme.createdBy && (
                   <p className="text-xs text-gray-400 mt-1">

@@ -16,7 +16,7 @@ export const incrementMetric = async (key, delta = 1) => {
   await AnalyticsMetric.findOneAndUpdate(
     { key },
     { $inc: { value: delta } },
-    { new: true, upsert: true, setDefaultsOnInsert: true }
+    { returnDocument: 'after', upsert: true, setDefaultsOnInsert: true }
   );
 };
 

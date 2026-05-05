@@ -139,6 +139,23 @@ Verification: Added temporary trace logs in [server/src/controllers/reportContro
 
 ---
 
+## Bug 11
+
+Description: Frontend report views showed broad/stale-looking data because requests were pointed at the wrong backend host, so expected filtered responses never came from the active API.
+
+Status: Fixed
+
+Root Cause: Client API base URL was misconfigured and pointed to an unintended deployment target instead of the active backend environment.
+
+Fix: Corrected the frontend API base configuration to the intended backend host and re-verified report filters against `/reports/me` with expected query params.
+
+Prevention:
+- Verify `VITE_API_URL` before each demo/release.
+- Validate `GET /api/system/health` against the same host shown in browser network calls.
+- Keep environment templates and onboarding docs aligned with current deployment targets.
+
+---
+
 ## Rules
 
 - Always log bugs immediately

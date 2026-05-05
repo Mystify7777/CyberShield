@@ -272,6 +272,26 @@ completed: Priority 6 feedback and states have been implemented across the clien
 - [ ] Ensure no broken layouts
 - [ ] Smooth transitions everywhere
 
+
+#### UI Roadmap
+  
+  **Completed:**
+  - Design system components (cards, buttons, alerts, modals, forms)
+  - Layout improvement (containers, grids, spacing system)
+  - Navbar refinement
+  - Dashboard polish
+  - Feedback and states
+  
+  **Remaining:**
+  - [ ] Global consistency audit in `client/src/index.css` (spacing, radius, shadows, typography)
+  - [ ] Page-wide spacing audit across `client/src/pages/**` (container width, padding, section spacing, grid alignment)
+  - [ ] Micro-interactions and visual cleanup (cards, buttons, links, empty/error states)
+  - [ ] Responsiveness QA (navbar, dashboard, admin pages, forum, knowledge hub, profile, settings, memes, videos, auth flows)
+  - [ ] Dark mode readiness and contrast checks
+  - [ ] Navigation cleanup and final polish (optional restructuring and stale-component cleanup)n utility (XSS prevention light layer)
+
+
+
 ---
 
 ### Phase 12: Security Hardening & Operational (Fullscan Findings)
@@ -327,7 +347,7 @@ completed: Priority 6 feedback and states have been implemented across the clien
   - [x] Global security middleware (helmet, xss-clean, mongo-sanitize)
   - [x] Request validation/sanitization on auth endpoints (express-validator)
   - [x] Request validation/sanitization on report endpoints (express-validator)
-  - [x] Frontend input sanitization utility (XSS prevention light layer)
+  - [x] Frontend input sanitizatio  
   - [x] NoSQL injection prevention (express-mongo-sanitize middleware)
 - [x] File upload system for reports (evidence):
   - [x] Multer package and upload middleware

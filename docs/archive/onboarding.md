@@ -231,6 +231,18 @@ Issue: Client cannot call backend
 - Cause: server not running on port 5000.
 - Fix: run `npm run dev` in `server` and confirm `http://localhost:5000/`.
 
+Issue: UI works but data looks wrong or filters appear ignored
+
+- Cause: frontend is calling the wrong backend host (stale/incorrect `VITE_API_URL`).
+- Fix: confirm client env points to intended API base and verify `GET /api/system/health` on that same host.
+
+Quick preflight before demo/release:
+
+- Check `client/.env` and deployed environment variables for `VITE_API_URL`.
+- Open browser network tab and confirm requests target the expected host.
+- Hit `<VITE_API_URL>/system/health` and confirm response is `{"status":"ok"}`.
+- Run one authenticated report request (`/reports/me`) and confirm filters are present in query string.
+
 ## 11) First-day sanity checklist
 
 - Server dependencies installed
@@ -238,6 +250,7 @@ Issue: Client cannot call backend
 - AI venv created and activated
 - AI packages installed
 - `server/.env` configured
+- `client/.env` API host verified (`VITE_API_URL`)
 - Server running on 5000
 - Client running on 3000
 - AI service running on 8000

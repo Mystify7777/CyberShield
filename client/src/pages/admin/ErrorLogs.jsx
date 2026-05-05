@@ -249,13 +249,13 @@ export default function ErrorLogs() {
                   </span>
                 </div>
 
-                <p className="font-semibold text-sm mb-1 break-words">{log.message}</p>
+                <p className="font-semibold text-sm mb-1 wrap-break-word">{log.message}</p>
                 {log.path && <p className="text-xs text-gray-500 mb-2">Path: {log.path}</p>}
 
                 {(log.stack || log.componentStack) && (
                   <details className="text-xs">
                     <summary className="cursor-pointer text-blue-600">View stack trace</summary>
-                    <pre className="mt-2 whitespace-pre-wrap break-words bg-gray-50 p-3 rounded">
+                    <pre className="mt-2 whitespace-pre-wrap wrap-break-word bg-gray-50 p-3 rounded-sm">
                       {log.stack || log.componentStack}
                     </pre>
                   </details>

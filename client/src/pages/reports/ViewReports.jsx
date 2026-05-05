@@ -239,12 +239,12 @@ export default function ViewReports() {
 
               <div className="flex flex-wrap gap-2 mb-3">
                 {r.isAnonymous && (
-                  <span className="px-2 py-1 rounded text-xs font-semibold bg-gray-100 text-gray-700 inline-flex items-center gap-1">
+                  <span className="px-2 py-1 rounded-sm text-xs font-semibold bg-gray-100 text-gray-700 inline-flex items-center gap-1">
                     <EyeOff size={14} /> Anonymous
                   </span>
                 )}
                 {r.isSensitive && (
-                  <span className="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-700 inline-flex items-center gap-1">
+                  <span className="px-2 py-1 rounded-sm text-xs font-semibold bg-red-100 text-red-700 inline-flex items-center gap-1">
                     <TriangleAlert size={14} /> Sensitive
                   </span>
                 )}
@@ -263,7 +263,7 @@ export default function ViewReports() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Shield size={16} className="text-gray-500" />
-                  <span className={`px-2 py-1 rounded text-xs font-semibold ${getSeverityColor(r.severity)}`}>
+                  <span className={`px-2 py-1 rounded-sm text-xs font-semibold ${getSeverityColor(r.severity)}`}>
                     {r.severity} Severity
                   </span>
                 </div>
@@ -288,7 +288,7 @@ export default function ViewReports() {
                     <img
                       src={`${ASSET_HOST}${r.evidence}`}
                       alt="Evidence"
-                      className="w-full max-w-md rounded border"
+                      className="w-full max-w-md rounded-sm border"
                     />
                   ) : (
                     <a

@@ -37,6 +37,19 @@ This folder exists to help maintain, extend, debug, and ship the platform withou
 
 ---
 
+## Release Preflight
+
+Before any demo, preview handoff, or production deploy, run the API-target preflight in `onboarding.md`:
+
+- Verify `VITE_API_URL` points to the intended backend host
+- Confirm browser network requests hit that same host
+- Validate `<VITE_API_URL>/system/health` returns `{"status":"ok"}`
+- Run one authenticated `/reports/me` request and confirm expected filter query params are present
+
+Reference: `onboarding.md` -> "Quick preflight before demo/release"
+
+---
+
 ## Current Product State
 
 CyberShield is in a **release-ready functional state** with live deployments.

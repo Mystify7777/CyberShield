@@ -18,7 +18,7 @@ export default function NavDropdown({
       >
         {label}
       </summary>
-      <div className={`absolute right-0 mt-2 ${widthClass} rounded-xl border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800 shadow-sm z-10`}>
+      <div className={`absolute right-0 mt-2 ${widthClass} rounded-xl border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800 shadow-xs z-10`}>
         {items.map((item) => (
           <button
             key={item.label}

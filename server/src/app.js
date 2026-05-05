@@ -18,6 +18,7 @@ import gameRoutes from "./routes/gameRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import systemRoutes from "./routes/systemRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import trustScanRoutes from "./routes/trustScanRoutes.js";
 import { sanitizeMiddleware } from "./middlewares/sanitizeMiddleware.js";
 import { xssMiddleware } from "./middlewares/xssMiddleware.js";
 import { errorHandler } from "./middlewares/errorMiddleware.js";
@@ -138,6 +139,7 @@ app.use("/api/game", gameRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/system", systemRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/trustscan", trustScanRoutes);
 
 app.get("/", (req, res) => {
 	res.send("API is running...");

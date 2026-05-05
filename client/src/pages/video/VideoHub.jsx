@@ -94,10 +94,10 @@ export default function VideoHub() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {videos.map((video) => (
               <div key={video._id} className="card">
-                <h3 className="font-semibold mb-2 break-words">{video.title}</h3>
+                <h3 className="font-semibold mb-2 wrap-break-word">{video.title}</h3>
 
                 <iframe
-                  className="w-full h-56 rounded"
+                  className="w-full h-56 rounded-sm"
                   src={toEmbedUrl(video.url)}
                   title={video.title}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
