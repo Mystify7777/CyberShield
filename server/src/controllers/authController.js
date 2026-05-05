@@ -1,18 +1,68 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { generateToken } from "../utils/generateToken.js";
+import jwt from "jsonwebtoken";
+import { generateToken, generateRefreshToken } from "../utils/generateToken.js";
 import { validationResult } from "express-validator";
 import { sendError, sendSuccess } from "../utils/response.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { addXP } from "../utils/gamification.js";
 import { addCoins } from "../utils/economy.js";
+import { clearRefreshTokenCookie, getRefreshTokenFromRequest, setRefreshTokenCookie } from "../utils/authCookies.js";
 import { logError, logInfo, logWarn, maskEmail } from "../utils/logger.js";
 
 const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
 const OTP_HASH_SECRET = process.env.OTP_HASH_SECRET || process.env.JWT_SECRET || "otp-fallback-secret";
 const hashOtp = (otp) => crypto.createHmac("sha256", OTP_HASH_SECRET).update(String(otp)).digest("hex");
 
+const buildClientUser = (user) => ({
+  _id: user._id,
+  name: user.name,
+  email: user.email,
+  role: user.role,
+  isVerified: user.isVerified,
+  isSuspended: user.isSuspended,
+  xp: user.xp,
+  level: user.level,
+  streak: user.streak,
+  coins: user.coins,
+  dailyCoins: user.dailyCoins,
+  badges: user.badges,
+  alias: user.alias,
+  bio: user.bio
+});
+
+const issueSession = async (res, user, message = "Login successful") => {
+  const sessionUser = await User.findById(user._id);
+
+  if (!sessionUser) {
+    return sendError(res, 404, "User not found");
+  }
+
+  sessionUser.refreshTokenVersion = Number(sessionUser.refreshTokenVersion || 0) + 1;
+  await sessionUser.save();
+
+  const accessToken = generateToken(sessionUser._id);
+  const refreshToken = generateRefreshToken(sessionUser._id, sessionUser.refreshTokenVersion);
+
+  setRefreshTokenCookie(res, refreshToken);
+
+  return sendSuccess(res, {
+    user: buildClientUser(sessionUser),
+    accessToken
+  }, 200, message);
+};
+
+const clearSessionCookie = (res) => {
+  clearRefreshTokenCookie(res);
+};
+
+const rotateRefreshToken = async (user) => {
+  user.refreshTokenVersion = Number(user.refreshTokenVersion || 0) + 1;
+  await user.save();
+
+  return generateRefreshToken(user._id, user.refreshTokenVersion);
+};
 // Register
 export const registerUser = async (req, res) => {
   try {
@@ -234,25 +284,77 @@ export const loginUser = async (req, res) => {
         await user.save();
       }
 
-      const refreshedUser = await User.findById(user._id);
-
-      return sendSuccess(res, {
-        _id: refreshedUser._id,
-        name: refreshedUser.name,
-        email: refreshedUser.email,
-        role: refreshedUser.role,
-        xp: refreshedUser.xp,
-        level: refreshedUser.level,
-        streak: refreshedUser.streak,
-        coins: refreshedUser.coins,
-        dailyCoins: refreshedUser.dailyCoins,
-        badges: refreshedUser.badges,
-        token: generateToken(refreshedUser._id)
-      });
+      return issueSession(res, user, "Login successful");
     } else {
       return sendError(res, 401, "Invalid credentials");
     }
   } catch (error) {
+    return sendError(res, 500, error.message);
+  }
+};
+
+export const refreshSession = async (req, res) => {
+  try {
+    const refreshToken = getRefreshTokenFromRequest(req);
+    if (!refreshToken) {
+      return sendError(res, 401, "No refresh token provided");
+    }
+
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+      clearSessionCookie(res);
+      return sendError(res, 401, "Not authorized");
+    }
+
+    if (user.isSuspended) {
+      clearSessionCookie(res);
+      return sendError(res, 403, "Account suspended");
+    }
+
+    if (Number(decoded.version) !== Number(user.refreshTokenVersion || 0)) {
+      clearSessionCookie(res);
+      return sendError(res, 401, "Not authorized");
+    }
+
+    const nextRefreshToken = await rotateRefreshToken(user);
+    const accessToken = generateToken(user._id);
+
+    setRefreshTokenCookie(res, nextRefreshToken);
+
+    return sendSuccess(res, {
+      user: buildClientUser(user),
+      accessToken
+    }, 200, "Session refreshed");
+  } catch (error) {
+    clearSessionCookie(res);
+    return sendError(res, 401, "Not authorized");
+  }
+};
+
+export const logoutUser = async (req, res) => {
+  try {
+    const refreshToken = getRefreshTokenFromRequest(req);
+
+    if (refreshToken) {
+      try {
+        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+        const user = await User.findById(decoded.id);
+
+        if (user && Number(decoded.version) === Number(user.refreshTokenVersion || 0)) {
+          user.refreshTokenVersion = Number(user.refreshTokenVersion || 0) + 1;
+          await user.save();
+        }
+      } catch {
+        // Logout should still succeed even if the refresh token is expired or malformed.
+      }
+    }
+
+    clearSessionCookie(res);
+    return sendSuccess(res, { loggedOut: true }, 200, "Logged out");
+  } catch (error) {
+    clearSessionCookie(res);
     return sendError(res, 500, error.message);
   }
 };
@@ -374,13 +476,6 @@ export const resetPassword = async (req, res) => {
 export const validateToken = async (req, res) => {
   return sendSuccess(res, {
     valid: true,
-    user: {
-      _id: req.user._id,
-      name: req.user.name,
-      email: req.user.email,
-      role: req.user.role,
-      isVerified: req.user.isVerified,
-      isSuspended: req.user.isSuspended
-    }
+    user: buildClientUser(req.user)
   });
 };

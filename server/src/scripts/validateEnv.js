@@ -1,6 +1,7 @@
 const requiredEnvVars = [
   "MONGO_URI",
   "JWT_SECRET",
+  "JWT_REFRESH_SECRET",
   "OTP_HASH_SECRET",
   "ENCRYPTION_KEY",
   "AI_SERVICE_URL",

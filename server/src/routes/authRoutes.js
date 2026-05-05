@@ -8,7 +8,9 @@ import {
   resendOTP,
   forgotPassword,
   resetPassword,
-  validateToken
+  validateToken,
+  refreshSession,
+  logoutUser
 } from "../controllers/authController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
@@ -61,7 +63,7 @@ router.post(
   [
     body("name").trim().escape().notEmpty().withMessage("Name is required"),
     emailChain(),
-    body("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters")
+    body("password").isLength({ min: 8 }).withMessage("Password must be at least 8 characters")
   ],
   registerUser
 );
@@ -116,12 +118,14 @@ router.post(
       .notEmpty()
       .withMessage("Reset token required"),
     body("newPassword")
-      .isLength({ min: 6 })
-      .withMessage("New password must be at least 6 characters")
+      .isLength({ min: 8 })
+      .withMessage("New password must be at least 8 characters")
   ],
   resetPassword
 );
 
+router.post("/refresh", refreshSession);
+router.post("/logout", logoutUser);
 router.get("/validate", protect, validateToken);
 
 export default router;

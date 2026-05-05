@@ -1,9 +1,16 @@
 import jwt from "jsonwebtoken";
 
-export const generateToken = (id) => {
-  const jwtExpiresIn = process.env.JWT_EXPIRES_IN || "24h";
+const getAccessTokenExpiresIn = () => process.env.JWT_EXPIRES_IN || "15m";
+const getRefreshTokenExpiresIn = () => process.env.JWT_REFRESH_EXPIRES_IN || "7d";
 
+export const generateToken = (id, expiresIn = getAccessTokenExpiresIn()) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: jwtExpiresIn
+    expiresIn
+  });
+};
+
+export const generateRefreshToken = (id, refreshTokenVersion, expiresIn = getRefreshTokenExpiresIn()) => {
+  return jwt.sign({ id, version: refreshTokenVersion }, process.env.JWT_REFRESH_SECRET, {
+    expiresIn
   });
 };

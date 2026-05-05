@@ -83,6 +83,11 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: Date.now
     },
+    refreshTokenVersion: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
     lastActions: {
       game: {
         type: Date,
