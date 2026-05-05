@@ -28,6 +28,11 @@ Legacy and overlapping logs were archived to docs/archive.
 
 ### 📝 Configuration
 - **`.env.sample`**: Created comprehensive environment template with 13 key variables: `MONGO_URI`, `JWT_SECRET`, `OTP_HASH_SECRET`, `ENCRYPTION_KEY`, `AI_SERVICE_URL`, email credentials, `ALLOWED_ORIGINS`, `UPLOAD_MAX_FILE_SIZE_MB`, `LOG_LEVEL`, `API_PORT`, node env settings.
+- **Startup env validation**: Added `server/src/scripts/validateEnv.js`, wired it into `server` `prestart` and the root startup chain so missing required env vars fail fast before the app launches.
+
+### 🧪 Tests
+- Added route-level Vitest coverage for `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/game/questions`, and `POST /api/game/reward`.
+- Verified the new tests pass locally.
 
 ### 📊 Metrics
 - 8 tasks completed (Tasks 1-4, 6-7, 9)

@@ -4,6 +4,8 @@
   "description": "",
   "main": "src/server.js",
   "scripts": {
+    "predev": "node src/scripts/validateEnv.js",
+    "prestart": "node src/scripts/validateEnv.js",
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "test": "vitest run",

@@ -1,6 +1,6 @@
 # CyberShield — Upgrade Plan
 > See also: [ConsolidatedDependencyGraph.md](ConsolidatedDependencyGraph.md) for full backend dependency graph and review legend.
-> Last updated: Current session — 8 tasks completed and 10 checklist items updated (Tasks 1-4, 6-7, 9). See [CHANGELOG.md](CHANGELOG.md) for details.
+> Last updated: Current session — 9 tasks completed (Tasks 1-4, 6-10 except 5). See [CHANGELOG.md](CHANGELOG.md) for details.
 > Prior status: README, package.json, server.js, app.js, all middlewares, all utils, all routes reviewed.
 
 ---
@@ -22,6 +22,11 @@
 
 **Configuration:**
 - ✅ .env.sample created with 13 required variables
+- ✅ Prestart env validation added for server startup and root `dev` launch path
+
+**Verification:**
+- ✅ Auth endpoint tests added for register and login flows
+- ✅ Game reward endpoint tests added for public questions, correct rewards, and incorrect answers
 
 ---
 
