@@ -81,16 +81,16 @@ const apiLimiter = rateLimit({
 });
 
 const shouldSkipGlobalRateLimit = (req) => {
-	const path = req.originalUrl || "";
+	const urlPath = req.originalUrl || "";
 
 	return (
 		req.method === "GET" && (
-			path.startsWith("/api/system/health") ||
-			path.startsWith("/api/system/version") ||
-			path.startsWith("/api/system/uptime") ||
-			path.startsWith("/api/reports") ||
-			path.startsWith("/api/admin/reports") ||
-			path.startsWith("/api/notifications")
+			urlPath.startsWith("/api/system/health") ||
+			urlPath.startsWith("/api/system/version") ||
+			urlPath.startsWith("/api/system/uptime") ||
+			urlPath.startsWith("/api/reports") ||
+			urlPath.startsWith("/api/admin/reports") ||
+			urlPath.startsWith("/api/notifications")
 		)
 	);
 };
@@ -99,8 +99,12 @@ const shouldSkipGlobalRateLimit = (req) => {
 app.use(helmet());
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
+
+// Body parsing MUST run before sanitizers so req.body is available to them
+app.use(express.json());
 app.use(xssMiddleware);
 app.use(sanitizeMiddleware);
+
 app.use((req, res, next) => {
 	if (shouldSkipGlobalRateLimit(req)) {
 		return next();
@@ -110,7 +114,6 @@ app.use((req, res, next) => {
 });
 
 // Standard Middleware
-app.use(express.json());
 app.use(morgan("dev"));
 if (isDebugLogsEnabled()) {
 	app.use((req, res, next) => {

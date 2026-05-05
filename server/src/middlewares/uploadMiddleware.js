@@ -1,4 +1,6 @@
 import multer from "multer";
+import { randomUUID } from "crypto";
+import path from "path";
 
 const parsePositiveNumber = (rawValue, fallback) => {
   const parsed = Number(rawValue);
@@ -30,12 +32,20 @@ const createInvalidTypeError = (message) => {
   return error;
 };
 
+const safeExt = (originalName) => {
+  const ext = path.extname(originalName || "").toLowerCase();
+  const allowedExts = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf"];
+  return allowedExts.includes(ext) ? ext : ".bin";
+};
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "uploads/");
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + "-" + file.originalname);
+    // Use a random UUID filename + validated extension to avoid path traversal and user-controlled names
+    const ext = safeExt(file.originalname);
+    cb(null, `${randomUUID()}${ext}`);
   }
 });
 
