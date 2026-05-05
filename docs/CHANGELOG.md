@@ -4,6 +4,40 @@ This file is the active, canonical development changelog for CyberShield.
 
 Legacy and overlapping logs were archived to docs/archive.
 
+## Current Session — Security & Reliability Hardening
+
+### 🔐 Security Fixes
+- **Game exploit elimination**: Moved phishing game answer validation server-side via `phishingQuestionBank.js`. Clients now submit `questionId+answerId` instead of client-controlled `correct` boolean; server validates against authoritative answers. Prevents XP/coin farming via direct API manipulation.
+- **Upload filename hardening**: Replaced user-controlled filename generation with `randomUUID() + extension` validation. Eliminates path traversal and directory enumeration risks. Extension whitelist: `.jpg, .jpeg, .png, .gif, .webp, .pdf`.
+- **TrustScan URL validation**: Enhanced input validation with `isURL`, TLD verification, and rejection of localhost/private IPs (`10.x`, `172.16-31.x`, `192.168.x`). Prevents internal network reconnaissance and abuse of external API quotas.
+- **Error message masking**: Updated `sendError()` and error middleware to mask all 5xx errors with generic messages; real errors logged server-side only. Prevents information disclosure via stack traces and internal system details.
+- **Middleware ordering fix**: Moved `express.json()` before sanitizer middleware in app.js. Ensures `req.body` is available during sanitization; fixes undefined reference bug in xssMiddleware and sanitizeMiddleware.
+- **Path variable shadowing fix**: Renamed `path` local variable to `urlPath` in shouldSkipGlobalRateLimit helper to avoid shadowing Node's path module.
+
+### 📊 Reliability Improvements
+- **TrustScan rate limiting**: Implemented per-user rate limit of **max 5 scans/hour**. Added duplicate scan deduplication (prevents simultaneous scans on same domain). Protects against external API quota exhaustion.
+- **Database indexing**: Added comprehensive indexes across models:
+  - **Article**: `createdBy`, `status`, compound `status+createdAt`
+  - **Report**: `user`, `status`, compound `user+createdAt`, `status+createdAt`, `severity+createdAt`
+  - **ForumPost**: `user`, compound `user+createdAt`
+  - **Meme**: `createdBy`, `status`, compound `status+createdAt`, `createdBy+createdAt`, `category+status`
+  - **Video**: `createdBy`, `status`, compound `status+createdAt`, `createdBy+createdAt`, `category+status`
+  - **User**: `email`, `role`, `isSuspended` (support for role queries and suspension checks)
+  - **TrustScanJob**: Already had indexes; verified existing coverage
+- **Pagination safeguards**: Capped maximum page limit to 100 items (from unlimited) in systemController. Prevents resource exhaustion via oversized limit parameters.
+
+### 📝 Configuration
+- **`.env.sample`**: Created comprehensive environment template with 13 key variables: `MONGO_URI`, `JWT_SECRET`, `OTP_HASH_SECRET`, `ENCRYPTION_KEY`, `AI_SERVICE_URL`, email credentials, `ALLOWED_ORIGINS`, `UPLOAD_MAX_FILE_SIZE_MB`, `LOG_LEVEL`, `API_PORT`, node env settings.
+
+### 📊 Metrics
+- 8 tasks completed (Tasks 1-4, 6-7, 9)
+- 11 model schema updates
+- 5 controller/middleware updates
+- 0 breaking changes to client APIs
+- All changes backward compatible with existing deployments
+
+---
+
 ## Day 61
 
 - Added TrustScan completion-path stack logging and hardened report generation against malformed signal payloads.

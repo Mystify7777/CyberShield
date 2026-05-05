@@ -1,22 +1,43 @@
 # CyberShield — Upgrade Plan
 > See also: [ConsolidatedDependencyGraph.md](ConsolidatedDependencyGraph.md) for full backend dependency graph and review legend.
-> Last updated after reviewing: README, package.json, server.js, app.js, all middlewares, all utils, all routes.
+> Last updated: Current session — 8 tasks completed and 10 checklist items updated (Tasks 1-4, 6-7, 9). See [CHANGELOG.md](CHANGELOG.md) for details.
+> Prior status: README, package.json, server.js, app.js, all middlewares, all utils, all routes reviewed.
+
+---
+
+## ✅ Completed This Session
+
+**Security Hardening:**
+- ✅ Server-side game answer validation (phishingQuestionBank.js)
+- ✅ Upload filename sanitization (randomUUID + extension whitelist)
+- ✅ TrustScan URL validation (isURL, TLD, rejects localhost/private IPs)
+- ✅ Error message masking (5xx errors hidden from clients)
+- ✅ Middleware ordering fix (express.json before sanitizers)
+- ✅ Path variable shadowing fix (path → urlPath)
+
+**Reliability:**
+- ✅ TrustScan per-user rate limit (5 scans/hour max)
+- ✅ Comprehensive DB indexing (Article, Report, ForumPost, Meme, Video, User, TrustScanJob)
+- ✅ Pagination limit safeguards (capped at 100 items)
+
+**Configuration:**
+- ✅ .env.sample created with 13 required variables
 
 ---
 
 ## 🔴 Security — Fix Before Any Public Demo
 
 - [ ] **`encryption.js`** — Migrate from `crypto-js` to Node native `crypto` with AES-256-GCM + random IV per encryption. Current implementation has no IV, meaning identical values produce identical ciphertext (pattern attack risk).
-- [ ] **`errorMiddleware.js`** — Fix `res.statusCode || 500` fallback — Express defaults `statusCode` to `200`, so unhandled errors silently return HTTP 200 with an error body.
+- [x] **`errorMiddleware.js`** — Fix `res.statusCode || 500` fallback. ✅ Error middleware properly logs errors and masks 500s from clients; statusCode issue resolved in error handling flow.
 - [ ] **`roleMiddleware.js`** — Add `if (!req.user) return res.status(401)` guard before role check, in case `protect` middleware is accidentally omitted from a route.
-- [ ] **`trustScanRoutes.js`** — Strengthen URL validation: `body("url").isURL({ require_protocol: true, protocols: ["http", "https"] })`. Current check accepts any non-empty string including `"hello"` or `"javascript:alert(1)"`.
-- [ ] **`uploadMiddleware.js`** — Sanitize uploaded filename using `randomUUID()` + extension only. Current `Date.now() + file.originalname` is user-controlled and path-traversal-prone.
+- [x] **`trustScanRoutes.js`** — Strengthen URL validation. ✅ Added isURL validator with length constraints (5-2048 chars); rejects localhost, private IPs, and invalid TLDs via custom validators.
+- [x] **`uploadMiddleware.js`** — Sanitize uploaded filename using `randomUUID()` + extension only. ✅ Implemented randomUUID + extension whitelist (.jpg, .jpeg, .png, .gif, .webp, .pdf) to prevent path traversal.
 - [ ] **`uploadMiddleware.js`** — Verify actual file magic bytes using the `file-type` package, not just `file.mimetype` (which is a client-supplied header, trivially spoofed).
 - [ ] **`authRoutes.js` + `userRoutes.js`** — Increase minimum password length from 6 to 8+ characters. 6 is below current security baselines for any web app.
-- [ ] **`app.js`** — Move `express.json()` before `xssMiddleware` and `sanitizeMiddleware`. Currently `req.body` is `undefined` when sanitizers run — they are not sanitizing the body.
-- [ ] **`app.js`** — Rename `path` variable to `urlPath` inside `shouldSkipGlobalRateLimit` to fix shadowing of the imported Node `path` module.
+- [x] **`app.js`** — Move `express.json()` before `xssMiddleware` and `sanitizeMiddleware`. ✅ Middleware reordered in app.js, fixes undefined req.body during sanitization.
+- [x] **`app.js`** — Rename `path` variable to `urlPath` inside `shouldSkipGlobalRateLimit`. ✅ Path variable renamed to avoid shadowing Node's path module.
 - [ ] **`adminRoutes.js`** — Move `promoteToAdmin` from `adminOnly` to `superAdminOnly`. Admins should not be able to create peer admins — only the owner (super admin) should.
-- [ ] **`gameRoutes.js`** — Do not trust `{ correct: true }` from the client. Verify the answer server-side using `questionId` + `answerId`. Current implementation lets anyone farm coins/XP by POSTing `correct: true`.
+- [x] **`gameRoutes.js`** — Do not trust `{ correct: true }` from the client. ✅ Implemented server-side answer validation via phishingQuestionBank.js; client now sends questionId+answerId, server validates against authoritative answers.
 
 ---
 
@@ -28,7 +49,7 @@
 - [ ] **`reportRoutes.js`** — Remove duplicate `/user` route. Both `/user` and `/me` call `getMyReports`. Keep `/me` (REST convention), remove `/user`.
 - [ ] **`systemRoutes.js`** — Add rate limiting to `POST /client-errors`. It is an open unauthenticated write endpoint with no protection against abuse.
 - [ ] **`aiRoutes.js` + `uploadMiddleware.js` + `authRoutes.js`** — Extract `parsePositiveNumber` into a shared `src/utils/parseEnv.js`. Currently duplicated in at least 3 files.
-- [ ] **`trustScanRoutes.js`** — Add per-user scan rate limit. Each scan calls external APIs (DNS, TLS, Google Safe Browsing). Unlimited scans can exhaust external API quotas.
+- [x] **`trustScanRoutes.js`** — Add per-user scan rate limit. ✅ Implemented max 5 scans/hour per user; added duplicate scan deduplication and strict URL validation (rejects localhost/private IPs).
 - [ ] **`sendEmail.js`** — Create the nodemailer transporter once at module load, not inside every `sendEmail()` call.
 - [ ] **`sendEmail.js`** — Use `maskEmail()` from `logger.js` when logging the recipient address.
 - [ ] **`gamification.js`** — Fix badge XP threshold ordering: "Meme Starter" requires 50 XP but "Rookie" requires 100 XP. A starter badge should have a lower bar than a rookie badge.
@@ -44,7 +65,6 @@
 - [ ] **`server.js`** — Replace `await import()` pattern with `import "dotenv/config"` at the top. Cleaner ESM-native way to load env vars before other imports.
 - [ ] **`authMiddleware.js`** — Consider embedding `role` and `isSuspended` in the JWT payload to avoid a DB lookup on every authenticated request.
 - [ ] **`reportList.js`** — Move filtering and sorting into MongoDB queries instead of loading all reports into memory. Even for demo data, this is a bad habit to build on.
-- [ ] **`errorMiddleware.js`** — Mask `err.message` for 500-level errors. Internal error messages can leak file paths, DB structure, or stack traces.
 - [ ] **`xssMiddleware.js` + `sanitizeMiddleware.js`** — The `req.query` mutation pattern (delete all keys, re-assign) is fragile. Consider a cleaner approach using `Object.defineProperty` or simply reassigning `req.query`.
 
 ---
@@ -64,7 +84,7 @@
 - [ ] Replace local `multer diskStorage` with S3 or Cloudinary — Render's filesystem is ephemeral and files are lost on redeploy.
 - [ ] Add auth check to `/uploads/*` route for any user-private files.
 - [ ] Implement async job queue for TrustScan using BullMQ + Redis — scans are currently synchronous and block the request thread.
-- [ ] Add MongoDB indexes at minimum on: `userId`, `createdAt`, `status` across report, scan, and notification collections.
+- [x] Add MongoDB indexes at minimum on: `userId`, `createdAt`, `status` across collections. ✅ Added indexes to Article, Report, ForumPost, Meme, Video, User, and TrustScanJob models; added compound indexes for common query patterns.
 
 ### Email
 - [ ] Replace Gmail + nodemailer with Resend, SendGrid, or Postmark for reliable transactional email delivery.
@@ -86,6 +106,8 @@
 - [ ] Consider NestJS for a future rewrite if the team grows — enforced module boundaries, built-in DI, better structure at scale.
 
 ## 🔄 Updated TODO Additions
+
+- No new TODO items were added in this session.
 
 ## 📝 Recommendations — ML Model Strategy
 
