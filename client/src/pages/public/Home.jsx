@@ -64,7 +64,7 @@ export default function Home() {
 
   return (
     <PublicLayout>
-      <section className="relative overflow-hidden bg-gradient-to-br from-white via-blue-50 to-blue-200 px-6 py-20 md:py-28">
+      <section className="relative overflow-hidden bg-linear-to-br from-white via-blue-50 to-blue-200 px-6 py-20 md:py-28">
         <div className="pointer-events-none absolute -top-24 -left-20 h-72 w-72 rounded-full bg-blue-200/70 blur-3xl animate-float" />
         <div className="pointer-events-none absolute -bottom-24 -right-20 h-80 w-80 rounded-full bg-sky-200/60 blur-3xl animate-float" style={{ animationDelay: "1.2s" }} />
 
@@ -117,7 +117,7 @@ export default function Home() {
           </div>
 
           <div className="grid gap-4 animate-fade-in" style={{ animationDelay: "180ms" }}>
-            <div className="rounded-2xl border border-blue-100 bg-white/90 shadow-sm p-5 animate-fade-up" style={{ animationDelay: "220ms" }}>
+            <div className="rounded-2xl border border-blue-100 bg-white/90 shadow-xs p-5 animate-fade-up" style={{ animationDelay: "220ms" }}>
               <p className="text-xs uppercase tracking-wide text-blue-600 mb-1">Step 1</p>
               <h3 className="font-bold text-slate-900">Analyze Suspicious Text</h3>
               <p className="text-sm text-slate-600 mt-1">
@@ -125,7 +125,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-blue-100 bg-white/90 shadow-sm p-5 animate-fade-up" style={{ animationDelay: "320ms" }}>
+            <div className="rounded-2xl border border-blue-100 bg-white/90 shadow-xs p-5 animate-fade-up" style={{ animationDelay: "320ms" }}>
               <p className="text-xs uppercase tracking-wide text-blue-600 mb-1">Step 2</p>
               <h3 className="font-bold text-slate-900">Review Action Guidance</h3>
               <p className="text-sm text-slate-600 mt-1">
@@ -133,7 +133,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-blue-100 bg-white/90 shadow-sm p-5 animate-fade-up" style={{ animationDelay: "420ms" }}>
+            <div className="rounded-2xl border border-blue-100 bg-white/90 shadow-xs p-5 animate-fade-up" style={{ animationDelay: "420ms" }}>
               <p className="text-xs uppercase tracking-wide text-blue-600 mb-1">Step 3</p>
               <h3 className="font-bold text-slate-900">Report and Track</h3>
               <p className="text-sm text-slate-600 mt-1">
@@ -145,7 +145,7 @@ export default function Home() {
       </section>
 
       <section className="container-page py-10">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 md:p-8 shadow-sm">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 md:p-8 shadow-xs">
           <p className="text-xs uppercase tracking-[0.18em] text-blue-700 font-semibold">Main Product Loop</p>
           <div className="mt-4 grid md:grid-cols-3 gap-3 text-sm">
             {[
@@ -170,7 +170,7 @@ export default function Home() {
       </section>
 
       <section className="container-page py-2 pb-12">
-        <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50 p-6 md:p-8 shadow-sm">
+        <div className="rounded-2xl border border-blue-200 bg-linear-to-r from-blue-50 to-cyan-50 p-6 md:p-8 shadow-xs">
           <p className="text-xs uppercase tracking-[0.18em] text-blue-700 font-semibold">Trust Intelligence</p>
           <h2 className="mt-2 text-2xl md:text-3xl font-black text-slate-900">Analyze websites instantly with TrustScan</h2>
           <p className="mt-2 text-slate-700 max-w-3xl">
@@ -227,7 +227,7 @@ export default function Home() {
       </section>
 
       <section className="container-page py-14">
-        <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
+        <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-xs">
           <h2 className="text-2xl font-black text-slate-900 mb-2">Explore Community Modules</h2>
           <p className="text-slate-600 mb-4 text-sm">
             Forum, videos, memes, and games are available under the Community section once you complete the core loop.

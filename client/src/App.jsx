@@ -51,7 +51,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       {isWarming && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 px-6 backdrop-blur-sm">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/70 px-6 backdrop-blur-xs">
           <div className="w-full max-w-sm rounded-3xl border border-white/15 bg-white/10 p-8 text-center text-white shadow-2xl shadow-slate-950/40">
             <div className="mx-auto mb-5 h-12 w-12 rounded-full border-4 border-white/25 border-t-white animate-spin" />
             <p className="text-lg font-semibold">Waking up CyberShield</p>

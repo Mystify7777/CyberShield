@@ -129,7 +129,7 @@ export default function Navbar() {
   );
 
   return (
-    <header ref={navRef} className="sticky top-0 z-40 border-b border-neutral-200 bg-white/95 dark:border-neutral-700 dark:bg-neutral-900/95 backdrop-blur transition-colors">
+    <header ref={navRef} className="sticky top-0 z-40 border-b border-neutral-200 bg-white/95 dark:border-neutral-700 dark:bg-neutral-900/95 backdrop-blur-sm transition-colors">
       <div className="container-page py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <button onClick={() => navigate(PATHS.HOME)} className="text-xl font-bold text-primary-700 dark:text-primary-100 text-center sm:text-left">
           CyberShield

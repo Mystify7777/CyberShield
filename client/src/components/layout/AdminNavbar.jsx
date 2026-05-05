@@ -29,7 +29,7 @@ export default function AdminNavbar() {
   };
 
   return (
-    <div className="bg-white/95 dark:bg-neutral-900/95 border-b border-neutral-200 dark:border-neutral-700 shadow-sm px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 transition-colors">
+    <div className="bg-white/95 dark:bg-neutral-900/95 border-b border-neutral-200 dark:border-neutral-700 shadow-xs px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 transition-colors">
       <h1 className="text-xl font-semibold text-primary-700 dark:text-primary-100 text-center sm:text-left">Admin Panel</h1>
 
       <div className="w-full sm:w-auto flex flex-wrap items-center justify-center sm:justify-end gap-3 text-sm text-neutral-700 dark:text-neutral-200">

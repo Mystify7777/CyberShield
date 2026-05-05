@@ -189,12 +189,12 @@ export default function ManageReports() {
               <h3 className="font-semibold text-lg">{r.title}</h3>
               <div className="flex flex-wrap gap-2 my-2">
                 {r.isAnonymous && (
-                  <span className="px-2 py-1 rounded text-xs font-semibold bg-gray-100 text-gray-700 inline-flex items-center gap-1">
+                  <span className="px-2 py-1 rounded-sm text-xs font-semibold bg-gray-100 text-gray-700 inline-flex items-center gap-1">
                     <EyeOff size={14} /> Anonymous
                   </span>
                 )}
                 {r.isSensitive && (
-                  <span className="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-700 inline-flex items-center gap-1">
+                  <span className="px-2 py-1 rounded-sm text-xs font-semibold bg-red-100 text-red-700 inline-flex items-center gap-1">
                     <TriangleAlert size={14} /> Sensitive
                   </span>
                 )}
@@ -211,7 +211,7 @@ export default function ManageReports() {
                 </span>
 
                 <span
-                  className={`px-2 py-1 rounded text-white text-xs ${getStatusBadgeClass(r.status)}`}
+                  className={`px-2 py-1 rounded-sm text-white text-xs ${getStatusBadgeClass(r.status)}`}
                 >
                   {getStatusLabel(r.status)}
                 </span>

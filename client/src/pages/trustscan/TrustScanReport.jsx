@@ -91,8 +91,8 @@ export default function TrustScanReport() {
                   <ScoreRing score={report.score} verdict={report.verdict} />
 
                   <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-                    <p className="text-sm text-slate-600 break-words"><span className="font-semibold text-slate-800">Target:</span> {report.url}</p>
-                    <p className="mt-1 text-sm text-slate-600 break-words"><span className="font-semibold text-slate-800">Domain:</span> {report.normalizedDomain}</p>
+                    <p className="text-sm text-slate-600 wrap-break-word"><span className="font-semibold text-slate-800">Target:</span> {report.url}</p>
+                    <p className="mt-1 text-sm text-slate-600 wrap-break-word"><span className="font-semibold text-slate-800">Domain:</span> {report.normalizedDomain}</p>
                     <p className="mt-1 text-sm text-slate-600">
                       <span className="font-semibold text-slate-800">Scanned:</span> {new Date(report.createdAt).toLocaleString()}
                     </p>

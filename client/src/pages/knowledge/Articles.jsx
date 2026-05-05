@@ -450,7 +450,7 @@ export default function Articles() {
                         <p className="text-slate-600 text-sm mb-3">{toSnippet(article.content)}</p>
 
                         <div className="flex flex-wrap items-center gap-3 text-sm">
-                          <span className="px-2 py-1 rounded bg-indigo-50 text-indigo-600 text-xs font-medium">
+                          <span className="px-2 py-1 rounded-sm bg-indigo-50 text-indigo-600 text-xs font-medium">
                             {article.category || "GENERAL"}
                           </span>
 
@@ -461,7 +461,7 @@ export default function Articles() {
                             ).slice(0, 4).map((tag) => (
                               <span
                                 key={`${article._id}-${tag}`}
-                                className="px-2 py-1 rounded bg-slate-100 text-slate-600 text-xs font-medium"
+                                className="px-2 py-1 rounded-sm bg-slate-100 text-slate-600 text-xs font-medium"
                               >
                                 #{formatTagLabel(tag)}
                               </span>
