@@ -30,10 +30,10 @@ export default function MemeCard({ meme, refresh }) {
       <img
         src={`${API_HOST}${meme.image}`}
         alt={meme.caption || "Meme"}
-        className="rounded mb-3 w-full h-64 object-cover"
+        className="rounded-sm mb-3 w-full h-64 object-cover"
       />
 
-      <p className="font-medium break-words">{meme.caption}</p>
+      <p className="font-medium wrap-break-word">{meme.caption}</p>
       <p className="text-sm text-gray-500 mt-1">{meme.category}</p>
       {Number(meme.upvotes?.length || 0) > 10 && (
         <span className="inline-block text-yellow-600 text-sm font-semibold mt-1">🔥 Trending</span>

@@ -90,13 +90,13 @@ export default function ManageArticles() {
         <div className="flex gap-3 mb-6">
           <button
             onClick={() => setActiveTab("pending")}
-            className={`px-4 py-2 rounded ${activeTab === "pending" ? "btn btn-primary" : "btn"}`}
+            className={`px-4 py-2 rounded-sm ${activeTab === "pending" ? "btn btn-primary" : "btn"}`}
           >
             Pending ({pendingArticles.length})
           </button>
           <button
             onClick={() => setActiveTab("published")}
-            className={`px-4 py-2 rounded ${activeTab === "published" ? "btn btn-primary" : "btn"}`}
+            className={`px-4 py-2 rounded-sm ${activeTab === "published" ? "btn btn-primary" : "btn"}`}
           >
             Published ({allArticles.length})
           </button>

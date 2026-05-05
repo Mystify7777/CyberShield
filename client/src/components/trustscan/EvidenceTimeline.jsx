@@ -31,7 +31,7 @@ export default function EvidenceTimeline({ events = [] }) {
   }
 
   return (
-    <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-xs">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.22em] text-slate-500 font-semibold">Scan Evidence</p>

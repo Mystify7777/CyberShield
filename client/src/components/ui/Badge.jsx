@@ -10,7 +10,7 @@ const variantClassMap = {
 
 export default function Badge({ variant = "neutral", className, children }) {
   return (
-    <span className={cn("px-2 py-1 rounded text-xs", variantClassMap[variant] || variantClassMap.neutral, className)}>
+    <span className={cn("px-2 py-1 rounded-sm text-xs", variantClassMap[variant] || variantClassMap.neutral, className)}>
       {children}
     </span>
   );

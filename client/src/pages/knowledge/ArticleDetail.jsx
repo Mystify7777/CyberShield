@@ -126,7 +126,7 @@ export default function ArticleDetail() {
                     <p className="text-xs uppercase tracking-wide text-slate-400 mb-2">Tags</p>
                     <div className="flex flex-wrap gap-2">
                       {article.tags.map((tag) => (
-                        <span key={tag} className="px-2 py-1 rounded bg-slate-100 text-slate-600 text-xs font-medium">
+                        <span key={tag} className="px-2 py-1 rounded-sm bg-slate-100 text-slate-600 text-xs font-medium">
                           #{formatTagLabel(tag)}
                         </span>
                       ))}
@@ -139,18 +139,18 @@ export default function ArticleDetail() {
 
           <main className="flex-1">
             <article className="glass rounded-2xl p-6 sm:p-8 animate-fade-in border border-white/60">
-              <h1 className="text-2xl sm:text-3xl font-bold mb-3 break-words">
+              <h1 className="text-2xl sm:text-3xl font-bold mb-3 wrap-break-word">
                 {article.title}
               </h1>
 
               <div className="flex flex-wrap items-center gap-2 mb-6 text-xs sm:text-sm text-slate-500">
-                <span className="px-2 py-1 rounded bg-indigo-50 text-indigo-600 font-medium">
+                <span className="px-2 py-1 rounded-sm bg-indigo-50 text-indigo-600 font-medium">
                   {article.category || "GENERAL"}
                 </span>
                 {Array.isArray(article.tags) && article.tags.length > 0 && (
                   <span className="flex flex-wrap gap-2">
                     {article.tags.slice(0, 4).map((tag) => (
-                      <span key={tag} className="px-2 py-1 rounded bg-slate-100 text-slate-600 font-medium">
+                      <span key={tag} className="px-2 py-1 rounded-sm bg-slate-100 text-slate-600 font-medium">
                         #{formatTagLabel(tag)}
                       </span>
                     ))}
@@ -159,7 +159,7 @@ export default function ArticleDetail() {
                 <span>Published {formatDate(article.createdAt)}</span>
               </div>
 
-              <div className="text-slate-700 leading-relaxed whitespace-pre-wrap break-words">
+              <div className="text-slate-700 leading-relaxed whitespace-pre-wrap wrap-break-word">
                 {article.content}
               </div>
             </article>

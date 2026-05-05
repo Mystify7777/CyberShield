@@ -79,7 +79,7 @@ export default function ScamDetector() {
           </Button>
 
           {wakingHint && (
-            <p className="mt-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+            <p className="mt-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-3 py-2">
               {wakingHint}
             </p>
           )}
@@ -101,8 +101,8 @@ export default function ScamDetector() {
           <div
             className={`mt-5 p-5 rounded-xl text-white shadow ${
               result.label === "MALICIOUS"
-                ? "bg-gradient-to-r from-red-500 to-red-600"
-                : "bg-gradient-to-r from-green-500 to-green-600"
+                ? "bg-linear-to-r from-red-500 to-red-600"
+                : "bg-linear-to-r from-green-500 to-green-600"
             }`}
           >
             <h3 className="text-xl font-bold">{result.label}</h3>

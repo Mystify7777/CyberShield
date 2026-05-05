@@ -131,7 +131,7 @@ export default function Profile() {
       <div className="p-4 sm:p-6 max-w-4xl mx-auto">
         <div className="card mb-6">
           <h2
-            className="text-xl sm:text-2xl font-bold mb-1 break-words"
+            className="text-xl sm:text-2xl font-bold mb-1 wrap-break-word"
             title={user.alias ? `Username: ${user.name}` : undefined}
           >
             {user.alias || user.name}
@@ -147,9 +147,9 @@ export default function Profile() {
             <p className="text-sm text-gray-600">XP: {xp}</p>
           </div>
 
-          <div className="w-full bg-gray-200 h-2 rounded">
+          <div className="w-full bg-gray-200 h-2 rounded-sm">
             <div
-              className="bg-indigo-500 h-2 rounded"
+              className="bg-indigo-500 h-2 rounded-sm"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -164,7 +164,7 @@ export default function Profile() {
           ) : (
             <div className="flex flex-wrap gap-2">
               {badges.map((badge, index) => (
-                <span key={`${badge.name}-${index}`} className="px-3 py-1 bg-yellow-400 rounded text-sm">
+                <span key={`${badge.name}-${index}`} className="px-3 py-1 bg-yellow-400 rounded-sm text-sm">
                   {badge.name}
                 </span>
               ))}
