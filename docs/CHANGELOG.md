@@ -10,6 +10,7 @@ Legacy and overlapping logs were archived to docs/archive.
 - **Game exploit elimination**: Moved phishing game answer validation server-side via `phishingQuestionBank.js`. Clients now submit `questionId+answerId` instead of client-controlled `correct` boolean; server validates against authoritative answers. Prevents XP/coin farming via direct API manipulation.
 - **Upload filename hardening**: Replaced user-controlled filename generation with `randomUUID() + extension` validation. Eliminates path traversal and directory enumeration risks. Extension whitelist: `.jpg, .jpeg, .png, .gif, .webp, .pdf`.
 - **TrustScan URL validation**: Enhanced input validation with `isURL`, TLD verification, and rejection of localhost/private IPs (`10.x`, `172.16-31.x`, `192.168.x`). Prevents internal network reconnaissance and abuse of external API quotas.
+- **Auth refresh-cookie migration**: Replaced localStorage JWT storage with in-memory access tokens + httpOnly refresh cookies. Added `/api/auth/refresh` and `/api/auth/logout`, rotated refresh tokens on use, and reduced access token lifetime to 15 minutes.
 - **Error message masking**: Updated `sendError()` and error middleware to mask all 5xx errors with generic messages; real errors logged server-side only. Prevents information disclosure via stack traces and internal system details.
 - **Middleware ordering fix**: Moved `express.json()` before sanitizer middleware in app.js. Ensures `req.body` is available during sanitization; fixes undefined reference bug in xssMiddleware and sanitizeMiddleware.
 - **Path variable shadowing fix**: Renamed `path` local variable to `urlPath` in shouldSkipGlobalRateLimit helper to avoid shadowing Node's path module.
@@ -29,9 +30,11 @@ Legacy and overlapping logs were archived to docs/archive.
 ### 📝 Configuration
 - **`.env.sample`**: Created comprehensive environment template with 13 key variables: `MONGO_URI`, `JWT_SECRET`, `OTP_HASH_SECRET`, `ENCRYPTION_KEY`, `AI_SERVICE_URL`, email credentials, `ALLOWED_ORIGINS`, `UPLOAD_MAX_FILE_SIZE_MB`, `LOG_LEVEL`, `API_PORT`, node env settings.
 - **Startup env validation**: Added `server/src/scripts/validateEnv.js`, wired it into `server` `prestart` and the root startup chain so missing required env vars fail fast before the app launches.
+- **Auth policy update**: Increased password minimum length to 8 characters on register/reset flows and aligned the client-side validation with the backend.
 
 ### 🧪 Tests
 - Added route-level Vitest coverage for `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/game/questions`, and `POST /api/game/reward`.
+- Added route-level Vitest coverage for `POST /api/auth/refresh` and `POST /api/auth/logout` cookie handling.
 - Verified the new tests pass locally.
 
 ### 📊 Metrics

@@ -11,7 +11,7 @@ export default function MemeCard({ meme, refresh }) {
   const hasDownvoted = Boolean(userId && meme.downvotes?.some((id) => String(id) === String(userId)));
 
   const vote = async (type) => {
-    if (!user?.token) {
+    if (!user) {
       toast.error("Login required to vote");
       return;
     }

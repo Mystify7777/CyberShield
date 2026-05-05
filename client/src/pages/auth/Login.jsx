@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import API from "../../services/api";
 import { sanitizeObject } from "../../utils/sanitizer";
+import { setAccessToken, storeUserProfile } from "../../services/authSession";
 
 const isValidEmail = (email) => {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -25,8 +26,8 @@ export default function Login() {
       return;
     }
 
-    if (form.password.length < 6) {
-      toast.error("Password must be at least 6 characters");
+    if (form.password.length < 8) {
+      toast.error("Password must be at least 8 characters");
       return;
     }
 
@@ -36,11 +37,12 @@ export default function Login() {
       const sanitized = sanitizeObject(form);
       const { data } = await API.post("/auth/login", sanitized);
 
-      localStorage.setItem("user", JSON.stringify(data));
+      setAccessToken(data.accessToken);
+      storeUserProfile(data.user);
       toast.success("Login successful");
 
       // Redirect based on role
-      if (["ADMIN", "SUPER_ADMIN"].includes(data.role)) {
+      if (["ADMIN", "SUPER_ADMIN"].includes(data.user.role)) {
         navigate("/admin");
       } else {
         navigate("/dashboard");

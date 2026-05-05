@@ -1,6 +1,6 @@
 # CyberShield — Upgrade Plan
 > See also: [ConsolidatedDependencyGraph.md](ConsolidatedDependencyGraph.md) for full backend dependency graph and review legend.
-> Last updated: Current session — 9 tasks completed (Tasks 1-4, 6-10 except 5). See [CHANGELOG.md](CHANGELOG.md) for details.
+> Last updated: Current session — 10 tasks completed (Tasks 1-10). See [CHANGELOG.md](CHANGELOG.md) for details.
 > Prior status: README, package.json, server.js, app.js, all middlewares, all utils, all routes reviewed.
 
 ---
@@ -27,6 +27,7 @@
 **Verification:**
 - ✅ Auth endpoint tests added for register and login flows
 - ✅ Game reward endpoint tests added for public questions, correct rewards, and incorrect answers
+- ✅ httpOnly refresh-cookie auth flow added with refresh/logout coverage
 
 ---
 
@@ -38,10 +39,9 @@
 - [x] **`trustScanRoutes.js`** — Strengthen URL validation. ✅ Added isURL validator with length constraints (5-2048 chars); rejects localhost, private IPs, and invalid TLDs via custom validators.
 - [x] **`uploadMiddleware.js`** — Sanitize uploaded filename using `randomUUID()` + extension only. ✅ Implemented randomUUID + extension whitelist (.jpg, .jpeg, .png, .gif, .webp, .pdf) to prevent path traversal.
 - [ ] **`uploadMiddleware.js`** — Verify actual file magic bytes using the `file-type` package, not just `file.mimetype` (which is a client-supplied header, trivially spoofed).
-- [ ] **`authRoutes.js` + `userRoutes.js`** — Increase minimum password length from 6 to 8+ characters. 6 is below current security baselines for any web app.
+- [x] **`authRoutes.js` + `userRoutes.js`** — Increase minimum password length from 6 to 8+ characters. ✅ Backend and client validation updated to 8 characters.
 - [x] **`app.js`** — Move `express.json()` before `xssMiddleware` and `sanitizeMiddleware`. ✅ Middleware reordered in app.js, fixes undefined req.body during sanitization.
 - [x] **`app.js`** — Rename `path` variable to `urlPath` inside `shouldSkipGlobalRateLimit`. ✅ Path variable renamed to avoid shadowing Node's path module.
-- [ ] **`adminRoutes.js`** — Move `promoteToAdmin` from `adminOnly` to `superAdminOnly`. Admins should not be able to create peer admins — only the owner (super admin) should.
 - [x] **`gameRoutes.js`** — Do not trust `{ correct: true }` from the client. ✅ Implemented server-side answer validation via phishingQuestionBank.js; client now sends questionId+answerId, server validates against authoritative answers.
 
 ---
@@ -96,8 +96,8 @@
 - [ ] Add retry logic / email queue for delivery failures.
 
 ### Auth
-- [ ] Confirm JWT is stored in `httpOnly` cookies, not `localStorage` (XSS-safe).
-- [ ] Add refresh token flow and shorten access token expiry to 15 minutes.
+- [x] Confirm JWT is stored in `httpOnly` cookies, not `localStorage` (XSS-safe). ✅ Access token now stays in memory; refresh token is httpOnly cookie-backed.
+- [x] Add refresh token flow and shorten access token expiry to 15 minutes. ✅ Login/refresh/logout endpoints now issue and rotate short-lived access tokens.
 - [ ] Add password complexity requirements (uppercase, number, special character) beyond length alone.
 
 ### Observability
