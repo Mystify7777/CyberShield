@@ -53,13 +53,22 @@ commands.push({
   cwd: aiDir
 });
 
+
 const children = [];
 
 for (const entry of commands) {
+  if (!fs.existsSync(entry.cwd)) {
+    console.error(`Directory for ${entry.name} does not exist: ${entry.cwd}`);
+    process.exit(1);
+  }
+  if (!entry.command) {
+    console.error(`Command for ${entry.name} is not defined.`);
+    process.exit(1);
+  }
   const child = spawn(entry.command, entry.args, {
     cwd: entry.cwd,
     stdio: "inherit",
-    shell: false
+    shell: isWindows
   });
 
   child.on("exit", (code, signal) => {
