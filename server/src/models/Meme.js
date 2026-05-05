@@ -14,17 +14,20 @@ const memeSchema = new mongoose.Schema(
     category: {
       type: String,
       enum: ["SCAM", "AWARENESS", "FUN"],
-      default: "FUN"
+      default: "FUN",
+      index: true
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true
+      required: true,
+      index: true
     },
     status: {
       type: String,
       enum: ["VISIBLE", "FLAGGED", "REMOVED"],
-      default: "VISIBLE"
+      default: "VISIBLE",
+      index: true
     },
     upvotes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     downvotes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
@@ -39,5 +42,10 @@ const memeSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Add compound indexes for common queries
+memeSchema.index({ status: 1, createdAt: -1 });
+memeSchema.index({ createdBy: 1, createdAt: -1 });
+memeSchema.index({ category: 1, status: 1 });
 
 export default mongoose.model("Meme", memeSchema);

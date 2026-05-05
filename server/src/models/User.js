@@ -9,7 +9,8 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
-      unique: true
+      unique: true,
+      index: true
     },
     password: {
       type: String,
@@ -18,11 +19,13 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: ["USER", "ADMIN", "SUPER_ADMIN"],
-      default: "USER"
+      default: "USER",
+      index: true
     },
     isSuspended: {
       type: Boolean,
-      default: false
+      default: false,
+      index: true
     },
     isVerified: {
       type: Boolean,

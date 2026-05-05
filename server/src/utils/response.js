@@ -14,7 +14,8 @@ export const sendSuccess = (res, data, statusCode = 200, message) => {
 export const sendError = (res, statusCode, message, errors) => {
   const payload = {
     success: false,
-    message
+    // Mask internal error details for 5xx errors (never expose raw error messages to clients)
+    message: statusCode >= 500 ? "An internal server error occurred. Please try again later." : message
   };
 
   if (errors) {
