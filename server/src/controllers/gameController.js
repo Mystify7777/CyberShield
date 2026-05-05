@@ -3,8 +3,18 @@ import User from "../models/User.js";
 import { addXP } from "../utils/gamification.js";
 import { addCoins } from "../utils/economy.js";
 import { sendError, sendSuccess } from "../utils/response.js";
+import { validateAnswer, getPublicQuestions } from "../data/phishingQuestionBank.js";
 
 const GAME_COOLDOWN_MS = 10000;
+
+export const getQuestions = (req, res) => {
+  try {
+    const questions = getPublicQuestions();
+    return sendSuccess(res, { questions }, 200, "Questions retrieved");
+  } catch (error) {
+    return sendError(res, 500, error.message);
+  }
+};
 
 export const rewardGame = async (req, res) => {
   try {
@@ -13,10 +23,12 @@ export const rewardGame = async (req, res) => {
       return sendError(res, 400, "Validation failed", errors.array());
     }
 
-    const { correct } = req.body;
+    const { questionId, answerId } = req.body;
 
-    if (!correct) {
-      return sendSuccess(res, { rewarded: false }, 200, "Answer recorded");
+    // Validate that the submitted answer is correct server-side
+    const validation = validateAnswer(questionId, answerId);
+    if (!validation.valid) {
+      return sendSuccess(res, { rewarded: false }, 200, validation.error);
     }
 
     const user = await User.findById(req.user._id);
