@@ -1,5 +1,6 @@
 # CyberShield
 
+⚠️⚠️ Due to some conflict between smtp and resend, the authorization isn't working for now as it requires an otp. I am trying to look for a workaround that doesn't requires me investing, I am broke..
 CyberShield is a trust intelligence platform that helps users assess suspicious digital targets, report incidents, and act with clearer risk context.
 
 ## V3 Focus
