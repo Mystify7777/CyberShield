@@ -1,6 +1,6 @@
 # CyberShield — Upgrade Plan
 > See also: [ConsolidatedDependencyGraph.md](ConsolidatedDependencyGraph.md) for full backend dependency graph and review legend.
-> Last updated: Current session — 10 tasks completed (Tasks 1-10). See [CHANGELOG.md](CHANGELOG.md) for details.
+> Last updated: Current session — 17 tasks completed (Tasks 1-10 plus phase 1 PR-ready fixes). See [CHANGELOG.md](CHANGELOG.md) for details.
 > Prior status: README, package.json, server.js, app.js, all middlewares, all utils, all routes reviewed.
 
 ---
@@ -28,17 +28,23 @@
 - ✅ Auth endpoint tests added for register and login flows
 - ✅ Game reward endpoint tests added for public questions, correct rewards, and incorrect answers
 - ✅ httpOnly refresh-cookie auth flow added with refresh/logout coverage
+- ✅ AES-256-GCM report encryption with random IV and legacy decrypt fallback
+- ✅ OTP hardening: crypto.randomInt generation, mandatory OTP secret, hash-only verification
+- ✅ Upload validation now checks magic bytes via file-type before persistence
+- ✅ Asset URL sanitization now uses a shared safe helper for meme/report moderation views
+- ✅ API client now avoids forced /500 redirects and only records real server/network failures
+- ✅ Coin/XP updates now use atomic MongoDB writes instead of read-modify-save cycles
 
 ---
 
 ## 🔴 Security — Fix Before Any Public Demo
 
-- [ ] **`encryption.js`** — Migrate from `crypto-js` to Node native `crypto` with AES-256-GCM + random IV per encryption. Current implementation has no IV, meaning identical values produce identical ciphertext (pattern attack risk).
+- [x] **`encryption.js`** — Migrate from `crypto-js` to Node native `crypto` with AES-256-GCM + random IV per encryption. ✅ Switched to AES-256-GCM with a random IV, auth tag, 32-byte key enforcement, and legacy decrypt compatibility.
 - [x] **`errorMiddleware.js`** — Fix `res.statusCode || 500` fallback. ✅ Error middleware properly logs errors and masks 500s from clients; statusCode issue resolved in error handling flow.
 - [ ] **`roleMiddleware.js`** — Add `if (!req.user) return res.status(401)` guard before role check, in case `protect` middleware is accidentally omitted from a route.
 - [x] **`trustScanRoutes.js`** — Strengthen URL validation. ✅ Added isURL validator with length constraints (5-2048 chars); rejects localhost, private IPs, and invalid TLDs via custom validators.
 - [x] **`uploadMiddleware.js`** — Sanitize uploaded filename using `randomUUID()` + extension only. ✅ Implemented randomUUID + extension whitelist (.jpg, .jpeg, .png, .gif, .webp, .pdf) to prevent path traversal.
-- [ ] **`uploadMiddleware.js`** — Verify actual file magic bytes using the `file-type` package, not just `file.mimetype` (which is a client-supplied header, trivially spoofed).
+- [x] **`uploadMiddleware.js`** — Verify actual file magic bytes using the `file-type` package, not just `file.mimetype` (which is a client-supplied header, trivially spoofed). ✅ Memory-backed upload validation now checks magic bytes before explicit persistence.
 - [x] **`authRoutes.js` + `userRoutes.js`** — Increase minimum password length from 6 to 8+ characters. ✅ Backend and client validation updated to 8 characters.
 - [x] **`app.js`** — Move `express.json()` before `xssMiddleware` and `sanitizeMiddleware`. ✅ Middleware reordered in app.js, fixes undefined req.body during sanitization.
 - [x] **`app.js`** — Rename `path` variable to `urlPath` inside `shouldSkipGlobalRateLimit`. ✅ Path variable renamed to avoid shadowing Node's path module.
@@ -48,7 +54,7 @@
 
 ## 🟡 Reliability — Fix Before Submission / Demo
 
-- [ ] **`economy.js` + `gamification.js`** — Fix race condition in `addCoins`, `spendCoins`, `addXP`. All use read-modify-write (`findById` → mutate → `save()`). Replace with atomic MongoDB `$inc` operations.
+- [x] **`economy.js` + `gamification.js`** — Fix race condition in `addCoins`, `spendCoins`, `addXP`. ✅ Replaced reward writes with atomic MongoDB updates (`$inc` / conditional `findOneAndUpdate`) to avoid read-modify-write races.
 - [ ] **`metrics.js`** — Wrap `incrementMetric` in `try/catch`. A metric write failure currently bubbles up as an unhandled rejection and can crash requests.
 - [ ] **`forumRoutes.js`** — Add input validation to `createPost` and `addReply`. No validation currently — users can submit empty posts or very long content.
 - [ ] **`reportRoutes.js`** — Remove duplicate `/user` route. Both `/user` and `/me` call `getMyReports`. Keep `/me` (REST convention), remove `/user`.
@@ -150,7 +156,7 @@
 
 #### User.js
 - [ ] **`User.js`** — Remove TTL index from `otpExpires` — it would delete the entire user document, not just the OTP. Enforce expiry in application logic only.
-- [ ] **`User.js`** — Rename `verificationOTP` → `verificationOTPHash` to make hashed storage intent explicit, once the `authController` OTP hashing fix is applied.
+- [x] **`User.js`** — Rename `verificationOTP` → `verificationOTPHash` to make hashed storage intent explicit, once the `authController` OTP hashing fix is applied. ✅ User model now stores the OTP hash only.
 - [ ] **`User.js`** — Remove `lastPlayedGame` — it duplicates `lastActions.game`. Standardise on `lastActions.game` throughout.
 - [ ] **`User.js`** — Add `min: 0` to `coins` and `xp` to prevent negative balances at the DB level.
 - [ ] **`User.js`** — Add `maxlength` to `name` (100), `bio` (500), `alias` (50).
@@ -161,10 +167,10 @@
 - [ ] **`Video.js`** — Add `maxlength: 200` to `title`, `maxlength: 2048` to `url`.
 - [ ] **`Video.js`** — Add URL format match validator on `url`.
 
-- [ ] **`authController`** — Replace `Math.random()` OTP with `crypto.randomInt(100000, 999999)`.
-- [ ] **`authController`** — Remove plaintext OTP fallback in `verifyOTP` comparison.
-- [ ] **`authController`** — Throw if `OTP_HASH_SECRET` is missing; do not fall back to a hardcoded string.
-- [ ] **`authController`** — Separate `OTP_HASH_SECRET` from `JWT_SECRET` in env config.
+- [x] **`authController`** — Replace `Math.random()` OTP with `crypto.randomInt(100000, 999999)`. ✅ OTP generation now uses `crypto.randomInt(100000, 1000000)`.
+- [x] **`authController`** — Remove plaintext OTP fallback in `verifyOTP` comparison. ✅ Verification is hash-only now.
+- [x] **`authController`** — Throw if `OTP_HASH_SECRET` is missing; do not fall back to a hardcoded string. ✅ OTP secret is now mandatory.
+- [x] **`authController`** — Separate `OTP_HASH_SECRET` from `JWT_SECRET` in env config. ✅ The OTP secret is configured independently in env validation and sample config.
 - [ ] **`systemController`** — Escape `q` before using it in `$regex` to prevent ReDoS.
 - [ ] **`systemController`** — Do not trust `userId` from unauthenticated request body in `logClientError`.
 - [ ] **`trustScanController`** — Add `isPublic` flag or strip `userId` from public report response.
@@ -270,10 +276,10 @@ client/src/
 │       ├── ErrorBoundary.jsx         ⚠️ console.error in production
 │       └── AppRoutes.jsx             ⚠️ route conflicts, unprotected routes
 │           ├── routes.config.js      ⚠️ incomplete admin nav, guest nav mismatch
-│           └── PrivateRoute.jsx      ⚠️ role from localStorage, shared module state
+│           └── PrivateRoute.jsx      ✅ validated server session drives role checks
 │
 ├── services/
-│   ├── api.js                        🔴 JWT in localStorage, JSON.parse unsafe, 5xx hard redirect
+│   ├── api.js                        ✅ in-memory access token + refresh-cookie session handling
 │   └── dashboardService.js           ❓ not yet reviewed
 │
 ├── utils/
@@ -282,7 +288,7 @@ client/src/
 │   ├── sanitizer.js                  ⚠️ misleading XSS framing, no recursion
 │   ├── economySync.js                ⚠️ localStorage-driven economy state, silent catch
 │   ├── trustscanPdf.js               ⚠️ no try/catch, CORS asset blanking
-│   └── logout.js                     ⚠️ localStorage.clear() too broad
+│   └── logout.js                     ✅ clears only app auth state
 │
 ├── routes/
 │   ├── AppRoutes.jsx                 ⚠️ see above
@@ -290,7 +296,7 @@ client/src/
 │
 ├── components/
 │   ├── ErrorBoundary.jsx             ⚠️ console.error in production
-│   ├── PrivateRoute.jsx              ⚠️ see above
+│   ├── PrivateRoute.jsx              ✅ see above
 │   ├── games/
 │   │   └── PhishingQuestionCard.jsx  ✅ clean presentational component
 │   ├── dashboard/                    ❓ not yet reviewed
@@ -329,7 +335,7 @@ client/src/
 
 ### 🔴 Critical — Fix Before Any Public Demo
 
-- [ ] **`api.js`** — JWT is stored in `localStorage`. Migrate to `httpOnly` cookie storage. Every XSS vulnerability on any page can steal the token from localStorage. Coordinate with backend cookie/CORS config.
+- [x] **`api.js`** — JWT is stored in `localStorage`. Migrate to `httpOnly` cookie storage. ✅ Client now uses in-memory access tokens with httpOnly refresh cookies and no longer depends on localStorage JWT state.
 - [ ] **`PhishingGame.jsx` + `phishingQuestions.js`** — Correct answer evaluated entirely client-side. `{ correct: true }` sent blindly to server. Anyone can POST `{ correct: true }` from DevTools and farm unlimited XP/coins. Fix requires: remove `answer` field from client data file, send `{ questionId, answerId }` to server, let server evaluate and return `{ correct, explanation }`.
 - [ ] **`phishingQuestions.js`** — `answer` field is embedded in the production JS bundle. All correct answers are readable in the Network tab before playing.
 - [ ] **`PhishingGame.jsx`** — No replay cooldown. Combined with the above exploit, replaying is a free XP/coin farm. Backend `lastPlayedGame` cooldown must be enforced server-side.
@@ -337,26 +343,26 @@ client/src/
 
 ### Group 4 — Reports, Forum, Meme, AI, and Reliability Issues
 
-- [ ] **`ViewReports.jsx`** — Evidence rendered without validation: path traversal/protocol injection in <img src> and <a href>.  
+- [x] **`ViewReports.jsx`** — Evidence rendered without validation: path traversal/protocol injection in <img src> and <a href>. ✅ Evidence URLs now flow through the shared safe asset helper.
 ---
-- [ ] **`ViewReports.jsx`** — `isAuthenticated` always false (wrong localStorage key): functional bug.  
+- [x] **`ViewReports.jsx`** — `isAuthenticated` always false (wrong localStorage key): functional bug. ✅ Auth gating now keys off the validated user session.
 
 - [ ] **`ViewReports.jsx`** — `contactEmail` shown publicly.  
 ### 🟡 Reliability — Fix Before Submission / Demo
 - [ ] **`ViewReports.jsx`** — `console.error` in production.  
 
 - [ ] **`CreateReport.jsx`** — No `maxLength` on title/description inputs.  
-- [ ] **`api.js`** — Wrap `JSON.parse(localStorage.getItem("user"))` in try/catch. Malformed storage crashes the request interceptor.
+- [x] **`api.js`** — Wrap `JSON.parse(localStorage.getItem("user"))` in try/catch. ✅ Shared auth-session helpers now own user profile parsing and avoid crashing the interceptor on malformed storage.
 - [ ] **`CreateReport.jsx`** — No client-side file size/type guard before upload.  
-- [ ] **`api.js`** — Hard redirect `window.location.assign("/500")` fires on any 5xx including background polls. Replace with an event or global error state so the UI decides when to redirect.
+- [x] **`api.js`** — Hard redirect `window.location.assign("/500")` fires on any 5xx including background polls. ✅ Removed the forced redirect; the UI can now decide how to surface failures.
 - [ ] **`SubmitMeme.jsx`** — No file size validation.  
-- [ ] **`api.js`** — `saveErrorContext` called on all errors including expected 4xx (401, 404, 422). Only call for unexpected 5xx or network failures.
+- [x] **`api.js`** — `saveErrorContext` called on all errors including expected 4xx (401, 404, 422). ✅ Error context is now captured only for unexpected server/network failures.
 - [ ] **`SubmitMeme.jsx`** — Caption has no `maxLength`.  
-- [ ] **`logout.js`** — `localStorage.clear()` wipes all localStorage, not just the `"user"` key. Use `localStorage.removeItem("user")` to be precise.
+- [x] **`logout.js`** — `localStorage.clear()` wipes all localStorage, not just the `"user"` key. Use `localStorage.removeItem("user")` to be precise.
 - [ ] **`SubmitMeme.jsx`** — Hardcoded coin amounts in toast message.  
-- [ ] **`PrivateRoute.jsx`** — Module-level `lastValidationAt` and `activeValidationPromise` are not reset on logout. A logout + login within 60 seconds will skip server re-validation.
+- [x] **`PrivateRoute.jsx`** — Module-level `lastValidationAt` and `activeValidationPromise` are not reset on logout. ✅ Client auth bootstrap now revalidates against the server per session instead of relying on stale shared module state.
 - [ ] **`SubmitMeme.jsx`** — Category options hardcoded, not from constants.  
-- [ ] **`PrivateRoute.jsx`** — `adminOnly` role check reads `user.role` from localStorage, not from the validated server session. A user can edit localStorage to pass the client guard (server will still 403 on API calls, but they'll see the admin UI).
+- [x] **`PrivateRoute.jsx`** — `adminOnly` role check reads `user.role` from localStorage, not from the validated server session. ✅ Admin gating now uses the validated server session user.
 - [ ] **`CreatePost.jsx`** — No `maxLength` on title/content.  
 - [ ] **`AppRoutes.jsx`** — Verify `/trustscan/report/:id/public` doesn't collide with `/trustscan/:id` in React Router v6 matching. Test explicitly.
 - [ ] **`CreatePost.jsx`** — Duplicate of inline form in `Forum.jsx` — two code paths.  
@@ -397,7 +403,7 @@ client/src/
   ⚠️ Student
 - [ ] **`ManageArticles.jsx`** — "Published" tab hits public endpoint — may hide non-approved articles.  
   ⚠️ Student
-- [ ] **`MemeModeration.jsx`** — API_HOST + meme.image path injection risk.  
+- [x] **`MemeModeration.jsx`** — API_HOST + meme.image path injection risk. ✅ Meme images now use the shared safe asset helper.
   🔴 Fix before demo
 - [ ] **`MemeModeration.jsx`** — No error state or retry on fetch failure.  
   ⚠️ Student

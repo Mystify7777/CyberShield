@@ -8,6 +8,7 @@ import { sendError, sendSuccess } from "../utils/response.js";
 import { incrementMetric, METRIC_KEYS } from "../utils/metrics.js";
 import { REPORT_STATUS_VALUES } from "../constants/reportTaxonomy.js";
 import { filterAndSortReports, getListPagination, paginateReports } from "../utils/reportList.js";
+import { deleteUploadedFile, persistUploadedFile, validateFile } from "../middlewares/uploadMiddleware.js";
 
 const PUBLIC_PAGE_LIMIT_MAX = 20;
 const PRIVATE_PAGE_LIMIT_MAX = 50;
@@ -52,10 +53,19 @@ export const createReport = async (req, res) => {
       isAnonymous,
       isSensitive
     } = req.body;
-    const evidencePath = req.file ? `/uploads/${req.file.filename}` : null;
     const anonymousFlag = isAnonymous === true || isAnonymous === "true";
     const sensitiveFlag = isSensitive === true || isSensitive === "true";
     const safeDescription = sensitiveFlag ? encrypt(description) : description;
+
+    let evidencePath = null;
+    let evidenceFilename = null;
+
+    if (req.file) {
+      await validateFile(req.file);
+      const savedEvidence = await persistUploadedFile(req.file);
+      evidenceFilename = savedEvidence.filename;
+      evidencePath = savedEvidence.path;
+    }
 
     const report = await Report.create({
       user: anonymousFlag ? null : req.user._id,
@@ -88,6 +98,10 @@ export const createReport = async (req, res) => {
 
     return sendSuccess(res, report, 201);
   } catch (error) {
+    if (typeof evidenceFilename === "string" && evidenceFilename) {
+      await deleteUploadedFile(evidenceFilename);
+    }
+
     return sendError(res, 500, error.message);
   }
 };

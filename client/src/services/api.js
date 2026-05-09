@@ -91,23 +91,24 @@ API.interceptors.response.use(
   async (error) => {
     const status = error?.response?.status;
     const requestUrl = error?.config?.url || "";
-    const isReportingCall = requestUrl.includes("/system/client-errors");
     const isServerError = Number.isInteger(status) && status >= 500 && status <= 599;
+    const isNetworkError = !error?.response;
     const shouldAttemptRefresh =
       status === 401 &&
       !error?.config?.skipAuthRefresh &&
       !error?.config?._retry &&
       !isAuthEndpoint(requestUrl);
 
-    saveErrorContext({
-      source: "API",
-      message: error?.response?.data?.message || error?.message || "API request failed",
-      stack: error?.stack,
-      path: window.location.pathname,
-      method: error?.config?.method?.toUpperCase(),
-      statusCode: status
-    });
-
+    if (isServerError || isNetworkError) {
+      saveErrorContext({
+        source: "API",
+        message: error?.response?.data?.message || error?.message || "API request failed",
+        stack: error?.stack,
+        path: window.location.pathname,
+        method: error?.config?.method?.toUpperCase(),
+        statusCode: status
+      });
+    }
 
     if (shouldAttemptRefresh) {
       error.config._retry = true;
@@ -119,14 +120,6 @@ API.interceptors.response.use(
         clearAccessToken();
         clearStoredUser();
       }
-    }
-    if (
-      !isReportingCall &&
-      isServerError &&
-      typeof window !== "undefined" &&
-      window.location.pathname !== "/500"
-    ) {
-      window.location.assign("/500");
     }
 
     return Promise.reject(error);

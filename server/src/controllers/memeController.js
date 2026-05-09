@@ -4,6 +4,7 @@ import { addXP } from "../utils/gamification.js";
 import { addCoins, enforceActionCooldown, spendCoins } from "../utils/economy.js";
 import { sendError, sendSuccess } from "../utils/response.js";
 import { incrementMetric, METRIC_KEYS } from "../utils/metrics.js";
+import { deleteUploadedFile, persistUploadedFile, validateFile } from "../middlewares/uploadMiddleware.js";
 
 const FLAG_MIN_TOTAL_VOTES = 20;
 const FLAG_DOWNVOTE_RATIO = 1.5;
@@ -19,14 +20,18 @@ export const createMeme = async (req, res) => {
       return sendError(res, 400, "Meme image is required");
     }
 
+    await validateFile(req.file);
+    const savedImage = await persistUploadedFile(req.file);
+
     try {
       await spendCoins(req.user._id, "MEME_UPLOAD");
     } catch (economyError) {
+      await deleteUploadedFile(savedImage.filename);
       return sendError(res, 400, economyError.message);
     }
 
     const meme = await Meme.create({
-      image: `/uploads/${req.file.filename}`,
+      image: savedImage.path,
       caption: req.body.caption,
       category: req.body.category || "FUN",
       createdBy: req.user._id

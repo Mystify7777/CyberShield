@@ -64,16 +64,29 @@ export const addXP = async (userId, action) => {
   const xpToAdd = XP_RULES[action] || 0;
   if (xpToAdd <= 0) return user;
 
-  user.xp = Number(user.xp || 0) + xpToAdd;
-  user.level = Number(user.level || 1);
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    { $inc: { xp: xpToAdd } },
+    { new: true }
+  );
 
-  const newLevel = calculateLevel(user.xp);
-  if (newLevel > user.level) {
-    user.level = newLevel;
+  if (!updatedUser) return null;
+
+  const newLevel = calculateLevel(updatedUser.xp);
+  const updatePayload = {};
+
+  if (newLevel > Number(updatedUser.level || 1)) {
+    updatePayload.level = newLevel;
   }
 
-  checkBadges(user);
-  await user.save();
+  const earnedBadges = checkBadges(updatedUser);
+  if (earnedBadges.length > 0) {
+    updatePayload.badges = updatedUser.badges;
+  }
 
-  return user;
+  if (Object.keys(updatePayload).length > 0) {
+    return User.findByIdAndUpdate(userId, { $set: updatePayload }, { new: true });
+  }
+
+  return updatedUser;
 };

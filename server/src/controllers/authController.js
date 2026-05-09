@@ -12,8 +12,16 @@ import { clearRefreshTokenCookie, getRefreshTokenFromRequest, setRefreshTokenCoo
 import { logError, logInfo, logWarn, maskEmail } from "../utils/logger.js";
 
 const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
-const OTP_HASH_SECRET = process.env.OTP_HASH_SECRET || process.env.JWT_SECRET || "otp-fallback-secret";
-const hashOtp = (otp) => crypto.createHmac("sha256", OTP_HASH_SECRET).update(String(otp)).digest("hex");
+const getOtpHashSecret = () => {
+  const secret = process.env.OTP_HASH_SECRET;
+
+  if (!secret) {
+    throw new Error("OTP_HASH_SECRET missing");
+  }
+
+  return secret;
+};
+const hashOtp = (otp) => crypto.createHmac("sha256", getOtpHashSecret()).update(String(otp)).digest("hex");
 
 const buildClientUser = (user) => ({
   _id: user._id,
@@ -84,7 +92,7 @@ export const registerUser = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = crypto.randomInt(100000, 1000000).toString();
     const hashedOtp = hashOtp(otp);
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
@@ -92,7 +100,7 @@ export const registerUser = async (req, res) => {
       name,
       email: normalizedEmail,
       password: hashedPassword,
-      verificationOTP: hashedOtp,
+      verificationOTPHash: hashedOtp,
       otpExpires: otpExpiry,
       failedOtpAttempts: 0
     });
@@ -141,8 +149,8 @@ export const resendOTP = async (req, res) => {
       return sendError(res, 400, "Account already verified");
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    user.verificationOTP = hashOtp(otp);
+    const otp = crypto.randomInt(100000, 1000000).toString();
+    user.verificationOTPHash = hashOtp(otp);
     user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
     user.failedOtpAttempts = 0;
     await user.save();
@@ -188,9 +196,7 @@ export const verifyOTP = async (req, res) => {
       );
     }
 
-    const isOtpValid = Boolean(user.verificationOTP) && (
-      user.verificationOTP === submittedOtpHash || user.verificationOTP === otp
-    );
+    const isOtpValid = Boolean(user.verificationOTPHash) && user.verificationOTPHash === submittedOtpHash;
     const isOtpExpired = !user.otpExpires || user.otpExpires < Date.now();
 
     if (!isOtpValid || isOtpExpired) {
@@ -218,7 +224,7 @@ export const verifyOTP = async (req, res) => {
     }
 
     user.isVerified = true;
-    user.verificationOTP = null;
+    user.verificationOTPHash = null;
     user.otpExpires = null;
     user.failedOtpAttempts = 0;
     await user.save();

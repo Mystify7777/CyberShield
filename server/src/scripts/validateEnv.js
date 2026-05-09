@@ -9,6 +9,12 @@ const requiredEnvVars = [
 ];
 
 const missingEnvVars = requiredEnvVars.filter((name) => !String(process.env[name] || "").trim());
+const encryptionKey = String(process.env.ENCRYPTION_KEY || "");
+
+if (encryptionKey && encryptionKey.length !== 32) {
+  console.error("ENCRYPTION_KEY must be exactly 32 characters long.");
+  process.exit(1);
+}
 
 if (missingEnvVars.length > 0) {
   console.error("Missing required environment variables:");

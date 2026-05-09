@@ -14,6 +14,11 @@ Legacy and overlapping logs were archived to docs/archive.
 - **Error message masking**: Updated `sendError()` and error middleware to mask all 5xx errors with generic messages; real errors logged server-side only. Prevents information disclosure via stack traces and internal system details.
 - **Middleware ordering fix**: Moved `express.json()` before sanitizer middleware in app.js. Ensures `req.body` is available during sanitization; fixes undefined reference bug in xssMiddleware and sanitizeMiddleware.
 - **Path variable shadowing fix**: Renamed `path` local variable to `urlPath` in shouldSkipGlobalRateLimit helper to avoid shadowing Node's path module.
+- **Report encryption hardening**: Switched report payload encryption to AES-256-GCM with a random IV, auth tag, and legacy decrypt compatibility.
+- **OTP hardening**: Replaced Math.random-based OTP generation with `crypto.randomInt`, made `OTP_HASH_SECRET` mandatory, and removed plaintext OTP verification fallback.
+- **Upload validation hardening**: Moved uploads to memory-backed validation so magic bytes can be checked with `file-type` before explicit persistence.
+- **Asset URL sanitization**: Added a shared safe asset helper for report and meme images to block protocol injection and malformed paths.
+- **API stability cleanup**: Removed the forced `/500` redirect and narrowed client error logging to unexpected server/network failures.
 
 ### 📊 Reliability Improvements
 - **TrustScan rate limiting**: Implemented per-user rate limit of **max 5 scans/hour**. Added duplicate scan deduplication (prevents simultaneous scans on same domain). Protects against external API quota exhaustion.
@@ -26,6 +31,7 @@ Legacy and overlapping logs were archived to docs/archive.
   - **User**: `email`, `role`, `isSuspended` (support for role queries and suspension checks)
   - **TrustScanJob**: Already had indexes; verified existing coverage
 - **Pagination safeguards**: Capped maximum page limit to 100 items (from unlimited) in systemController. Prevents resource exhaustion via oversized limit parameters.
+- **Atomic reward updates**: Moved coin and XP progression writes to atomic MongoDB updates to avoid read-modify-write race conditions.
 
 ### 📝 Configuration
 - **`.env.sample`**: Created comprehensive environment template with 13 key variables: `MONGO_URI`, `JWT_SECRET`, `OTP_HASH_SECRET`, `ENCRYPTION_KEY`, `AI_SERVICE_URL`, email credentials, `ALLOWED_ORIGINS`, `UPLOAD_MAX_FILE_SIZE_MB`, `LOG_LEVEL`, `API_PORT`, node env settings.
