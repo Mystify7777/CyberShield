@@ -182,27 +182,27 @@ export const spendCoins = async (userId, action) => {
   return updatedUser;
 };
 
-export const spendCoins = async (userId, action) => {
-  if (!userId) throw new Error("User is required");
+// export const spendCoins = async (userId, action) => {
+//   if (!userId) throw new Error("User is required");
 
-  const user = await User.findById(userId);
-  if (!user) throw new Error("User not found");
+//   const user = await User.findById(userId);
+//   if (!user) throw new Error("User not found");
 
-  resetDailyCoinsIfNeeded(user);
-  applyActionCooldown(user, action);
+//   resetDailyCoinsIfNeeded(user);
+//   applyActionCooldown(user, action);
 
-  const cost = Number(COST_RULES[action] || 0);
-  if (cost <= 0) {
-    await user.save();
-    return user;
-  }
+//   const cost = Number(COST_RULES[action] || 0);
+//   if (cost <= 0) {
+//     await user.save();
+//     return user;
+//   }
 
-  user.coins = Number(user.coins || 0);
-  if (user.coins < cost) {
-    throw new Error("Not enough coins");
-  }
+//   user.coins = Number(user.coins || 0);
+//   if (user.coins < cost) {
+//     throw new Error("Not enough coins");
+//   }
 
-  user.coins -= cost;
-  await user.save();
-  return user;
-};
+//   user.coins -= cost;
+//   await user.save();
+//   return user;
+// };
