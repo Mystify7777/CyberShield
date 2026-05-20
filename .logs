@@ -1,0 +1,17 @@
+{
+  "format": "Automated Changelog Log",
+  "description": "Machine-readable changelog tracking all updates.",
+  "categories": ["Frontend", "Backend", "Docs", "Config", "CI/CD", "Ops", "Planning", "Refactor", "Bugfix", "Feature", "Performance", "Other"],
+  "entries": [
+    {
+      "date": "2026-05-20",
+      "category": "Planning",
+      "title": "Changelog system initialized",
+      "description": "Initial .logs created and add-changelog script added",
+      "files": [".logs", "scripts/add-changelog.js"],
+      "priority": "medium",
+      "status": "completed"
+    }
+  ],
+  "lastUpdated": "2026-05-20T00:00:00Z"
+}
