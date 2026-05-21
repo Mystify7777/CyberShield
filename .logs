@@ -2,6 +2,7 @@
   "format": "Automated Changelog Log",
   "description": "Machine-readable changelog tracking all updates.",
   "categories": ["Frontend", "Backend", "Docs", "Config", "CI/CD", "Ops", "Planning", "Refactor", "Bugfix", "Feature", "Performance", "Other"],
+  "lastUpdated": "2026-05-21T00:00:00Z",
   "entries": [
     {
       "date": "2026-05-21",
@@ -22,7 +23,6 @@
       "status": "completed"
     }
   ],
-  "lastUpdated": "2026-05-21T00:00:00Z",
   "recent": {
     "date": "2026-05-21",
     "category": "Backend",

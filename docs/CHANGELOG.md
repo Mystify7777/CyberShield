@@ -50,6 +50,18 @@ Legacy and overlapping logs were archived to docs/archive.
 - 0 breaking changes to client APIs
 - All changes backward compatible with existing deployments
 
+### 🧩 Recent Auth Addendum
+- **Auth hardening commit**: `92c5dfc`
+- **Auth middleware**: Added strict bearer token parsing, response-based auth failures, and observability for suspended or invalid token attempts.
+- **Auth flows**: Hardened login, OTP, refresh, logout, and password-reset flows with anti-enumeration responses, atomic refresh-token rotation, and security logging.
+- **Limiter updates**: Added refresh limiter protection and enabled `skipSuccessfulRequests` for login, OTP verification, and refresh requests.
+- **Docs merge**: Consolidated the duplicate summary previously kept in `docs/logs.md` into this canonical changelog.
+
+### 🧪 QA Smoke Snapshot
+- **Report**: `docs/qa-report.md`
+- **Latest result**: 8 passed, 1 failed, 9 total
+- **Failure**: `POST /api/ai/predict` returned HTTP 500 with masked message `AI service failed` during the production smoke run.
+
 ---
 
 ## Day 61
