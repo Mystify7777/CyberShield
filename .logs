@@ -4,6 +4,15 @@
   "categories": ["Frontend", "Backend", "Docs", "Config", "CI/CD", "Ops", "Planning", "Refactor", "Bugfix", "Feature", "Performance", "Other"],
   "entries": [
     {
+      "date": "2026-05-21",
+      "category": "Backend",
+      "title": "Auth security hardening",
+      "description": "Hardened auth middleware token extraction and error handling, added refresh/login limiter protections, and tightened login, OTP, logout, refresh, and reset flows with anti-enumeration and audit logging.",
+      "files": ["server/src/controllers/authController.js", "server/src/middlewares/authMiddleware.js", "server/src/routes/authRoutes.js", "server/src/middlewares/rateLimiters.js", "server/package.json", "server/package-lock.json"],
+      "priority": "high",
+      "status": "completed"
+    },
+    {
       "date": "2026-05-20",
       "category": "Planning",
       "title": "Changelog system initialized",
@@ -13,7 +22,7 @@
       "status": "completed"
     }
   ],
-  "lastUpdated": "2026-05-21T08:52:00Z",
+  "lastUpdated": "2026-05-21T00:00:00Z",
   "recent": {
     "date": "2026-05-21",
     "category": "Backend",

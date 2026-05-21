@@ -41,18 +41,29 @@ const buildClientUser = (user) => ({
 });
 
 const issueSession = async (res, user, message = "Login successful") => {
-  const sessionUser = await User.findById(user._id);
+  const sessionUser = await User.findByIdAndUpdate(
+    user._id,
+    { $inc: { refreshTokenVersion: 1 } },
+    { new: true }
+  );
 
+  // ─────────────────────────────────────────────
+  // ARCHITECTURAL FIX
+  // Domain helper throws typed error instead of 
+  // directly manipulating the HTTP response.
+  // ─────────────────────────────────────────────
   if (!sessionUser) {
-    return sendError(res, 404, "User not found");
+    const error = new Error("User not found");
+    error.type = "USER_NOT_FOUND";
+    error.status = 404;
+    throw error;
   }
-
-  sessionUser.refreshTokenVersion = Number(sessionUser.refreshTokenVersion || 0) + 1;
-  await sessionUser.save();
 
   const accessToken = generateToken(sessionUser._id);
   const refreshToken = generateRefreshToken(sessionUser._id, sessionUser.refreshTokenVersion);
 
+  // Note: To make this 100% pure later, we should move the cookie setting 
+  // and sendSuccess out of here and back into the controller block.
   setRefreshTokenCookie(res, refreshToken);
 
   return sendSuccess(res, {
@@ -66,10 +77,31 @@ const clearSessionCookie = (res) => {
 };
 
 const rotateRefreshToken = async (user) => {
-  user.refreshTokenVersion = Number(user.refreshTokenVersion || 0) + 1;
-  await user.save();
+  const updatedUser =
+    await User.findByIdAndUpdate(
+      user._id,
+      {
+        $inc: {
+          refreshTokenVersion: 1,
+        },
+      },
+      {
+        new: true,
+      }
+    );
 
-  return generateRefreshToken(user._id, user.refreshTokenVersion);
+  if (!updatedUser) {
+    const error = new Error("User not found");
+    error.type = "USER_NOT_FOUND";
+    error.status = 404;
+
+    throw error;
+  }
+
+  return generateRefreshToken(
+    updatedUser._id,
+    updatedUser.refreshTokenVersion
+  );
 };
 // Register
 export const registerUser = async (req, res) => {
@@ -87,6 +119,13 @@ export const registerUser = async (req, res) => {
       if (!existingUser.isVerified) {
         await existingUser.deleteOne();
       } else {
+        logWarn(
+          "AUTH_SECURITY",
+          "Duplicate registration attempt",
+          {
+            email: maskEmail(normalizedEmail),
+          }
+        );
         return sendError(res, 400, "User already exists");
       }
     }
@@ -142,7 +181,12 @@ export const resendOTP = async (req, res) => {
     const user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
-      return sendError(res, 404, "User not found");
+      return sendSuccess(
+        res,
+        { resent: true },
+        200,
+        "If the account exists, OTP has been sent"
+      );
     }
 
     if (user.isVerified) {
@@ -162,7 +206,12 @@ export const resendOTP = async (req, res) => {
       userId: String(user._id)
     });
 
-    return sendSuccess(res, { resent: true }, 200, "OTP resent");
+    return sendSuccess(
+      res,
+      { resent: true },
+      200,
+      "If the account exists, OTP has been sent"
+    );
   } catch (error) {
     logError("AUTH", "resendOTP error", error?.message || error);
     return sendError(res, 500, error.message);
@@ -184,7 +233,11 @@ export const verifyOTP = async (req, res) => {
     const submittedOtpHash = hashOtp(otp);
 
     if (!user) {
-      return sendError(res, 404, "User not found");
+      return sendError(
+        res,
+        400,
+        "Invalid or expired OTP"
+      );
     }
 
     if (user.failedOtpAttempts >= maxAttempts) {
@@ -260,6 +313,13 @@ export const loginUser = async (req, res) => {
       }
 
       if (user.isSuspended) {
+          logWarn(
+            "AUTH_SECURITY",
+            "Suspended login attempt",
+            {
+              email: maskEmail(normalizedEmail),
+            }
+          );
         return sendError(res, 403, "Account suspended");
       }
 
@@ -292,6 +352,13 @@ export const loginUser = async (req, res) => {
 
       return issueSession(res, user, "Login successful");
     } else {
+      logWarn(
+        "AUTH_SECURITY",
+        "Invalid login attempt",
+        {
+          email: maskEmail(normalizedEmail),
+        }
+      );
       return sendError(res, 401, "Invalid credentials");
     }
   } catch (error) {
@@ -320,6 +387,13 @@ export const refreshSession = async (req, res) => {
     }
 
     if (Number(decoded.version) !== Number(user.refreshTokenVersion || 0)) {
+      logWarn(
+        "AUTH_SECURITY",
+        "Refresh token version mismatch",
+        {
+          userId: String(user._id),
+        }
+      );
       clearSessionCookie(res);
       return sendError(res, 401, "Not authorized");
     }
@@ -349,8 +423,14 @@ export const logoutUser = async (req, res) => {
         const user = await User.findById(decoded.id);
 
         if (user && Number(decoded.version) === Number(user.refreshTokenVersion || 0)) {
-          user.refreshTokenVersion = Number(user.refreshTokenVersion || 0) + 1;
-          await user.save();
+          await User.findByIdAndUpdate(
+            user._id,
+            {
+              $inc: {
+                refreshTokenVersion: 1,
+              },
+            }
+          );
         }
       } catch {
         // Logout should still succeed even if the refresh token is expired or malformed.
@@ -379,6 +459,23 @@ export const forgotPassword = async (req, res) => {
 
     // Avoid account enumeration by returning success either way
     if (!user) {
+      return sendSuccess(
+        res,
+        { requested: true },
+        200,
+        "If the account exists, a reset token has been sent"
+      );
+    }
+
+    if (user.isSuspended) {
+      logWarn(
+        "AUTH_SECURITY",
+        "Suspended user requested password reset",
+        {
+          email: maskEmail(normalizedEmail),
+        }
+      );
+
       return sendSuccess(
         res,
         { requested: true },
@@ -430,13 +527,6 @@ export const resetPassword = async (req, res) => {
       return sendError(res, 400, "Validation failed", errors.array());
     }
 
-    // Defensive guard: auth flows should never accept moderation or role fields.
-    ["isSuspended", "role", "isVerified", "coins", "xp"].forEach((blockedField) => {
-      if (Object.prototype.hasOwnProperty.call(req.body, blockedField)) {
-        delete req.body[blockedField];
-      }
-    });
-
     const { email, token, newPassword } = req.body;
     const normalizedEmail = normalizeEmail(email);
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
@@ -450,6 +540,7 @@ export const resetPassword = async (req, res) => {
       logWarn("AUTH_SECURITY", "Suspended user attempted password reset", {
         email: maskEmail(normalizedEmail)
       });
+      return sendError(res, 403, "Account access restricted");
     }
 
     if (
@@ -465,6 +556,10 @@ export const resetPassword = async (req, res) => {
     user.passwordResetToken = null;
     user.passwordResetExpires = null;
     user.failedOtpAttempts = 0;
+    
+    // Instantly kill all active sessions and stolen refresh tokens globally.
+    user.refreshTokenVersion = Number(user.refreshTokenVersion || 0) + 1;
+
     await user.save();
 
     logInfo("AUTH", "Password reset successful", {
