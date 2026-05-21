@@ -57,6 +57,11 @@ Legacy and overlapping logs were archived to docs/archive.
 - **Limiter updates**: Added refresh limiter protection and enabled `skipSuccessfulRequests` for login, OTP verification, and refresh requests.
 - **Docs merge**: Consolidated the duplicate summary previously kept in `docs/logs.md` into this canonical changelog.
 
+### 🔑 JWT Helper Hardening
+- **Token generation**: Hardened `server/src/utils/generateToken.js` with fail-fast env checks for `JWT_SECRET` and `JWT_REFRESH_SECRET`.
+- **Validation**: Added strict user-id validation, refresh-token version checks, and HS256 signing with `issuer: "cybershield"` for both access and refresh tokens.
+- **Reliability**: Reduced accidental misconfiguration risk by failing immediately when required JWT settings are missing.
+
 ### 🧪 QA Smoke Snapshot
 - **Report**: `docs/qa-report.md`
 - **Latest result**: 8 passed, 1 failed, 9 total

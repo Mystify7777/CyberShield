@@ -7,6 +7,15 @@
     {
       "date": "2026-05-21",
       "category": "Backend",
+      "title": "JWT token generation hardening",
+      "description": "Hardened JWT generation with fail-fast env validation, strict user-id and refresh-version checks, HS256 signing, and issuer claims for access and refresh tokens.",
+      "files": ["server/src/utils/generateToken.js"],
+      "priority": "high",
+      "status": "completed"
+    },
+    {
+      "date": "2026-05-21",
+      "category": "Backend",
       "title": "Auth security hardening",
       "description": "Hardened auth middleware token extraction and error handling, added refresh/login limiter protections, and tightened login, OTP, logout, refresh, and reset flows with anti-enumeration and audit logging.",
       "files": ["server/src/controllers/authController.js", "server/src/middlewares/authMiddleware.js", "server/src/routes/authRoutes.js", "server/src/middlewares/rateLimiters.js", "server/package.json", "server/package-lock.json"],
@@ -26,17 +35,13 @@
   "recent": {
     "date": "2026-05-21",
     "category": "Backend",
-    "title": "AI service/controller and response utils update; QA smoke",
-    "description": "Replaced AI service with a hardened implementation; updated AI controller to map AI errors to HTTP statuses and include dev-only side-effect stacks; improved response helpers to standardize 5xx masking. Ran QA smoke suite and added report.",
+    "title": "JWT token generation hardening",
+    "description": "Hardened JWT generation with fail-fast env validation, strict user-id and refresh-version checks, HS256 signing, and issuer claims for access and refresh tokens.",
     "files": [
-      "server/src/services/aiService.js",
-      "server/src/controllers/aiController.js",
-      "server/src/utils/response.js",
-      "docs/qa-report.md",
-      "docs/logs.md"
+      "server/src/utils/generateToken.js"
     ],
-    "priority": "medium",
+    "priority": "high",
     "status": "completed",
-    "commit": "3a0d5ea"
+    "commit": null
   }
 }
