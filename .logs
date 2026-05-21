@@ -13,5 +13,21 @@
       "status": "completed"
     }
   ],
-  "lastUpdated": "2026-05-20T00:00:00Z"
+  "lastUpdated": "2026-05-21T08:52:00Z",
+  "recent": {
+    "date": "2026-05-21",
+    "category": "Backend",
+    "title": "AI service/controller and response utils update; QA smoke",
+    "description": "Replaced AI service with a hardened implementation; updated AI controller to map AI errors to HTTP statuses and include dev-only side-effect stacks; improved response helpers to standardize 5xx masking. Ran QA smoke suite and added report.",
+    "files": [
+      "server/src/services/aiService.js",
+      "server/src/controllers/aiController.js",
+      "server/src/utils/response.js",
+      "docs/qa-report.md",
+      "docs/logs.md"
+    ],
+    "priority": "medium",
+    "status": "completed",
+    "commit": "3a0d5ea"
+  }
 }
