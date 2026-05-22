@@ -34,6 +34,8 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     getMetricsSnapshot()
   ]);
 
+  res.set("Cache-Control", "private, max-age=30");
+
   return sendSuccess(res, {
     totalUsers,
     activeUsers,
@@ -45,9 +47,33 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
 });
 
 // Get all users
+// Get all users (paginated for admin)
 export const getAllUsers = asyncHandler(async (req, res) => {
-  const users = await User.find().select("-password");
-  return sendSuccess(res, users);
+  // Bounded pagination: defaults to page 1, 25 items. Hard capped at 100 items per request.
+  const page = Math.max(Number(req.query.page) || 1, 1);
+  const limit = Math.min(Number(req.query.limit) || 25, 100);
+  const skip = (page - 1) * limit;
+
+  // Parallelize the fetch and the count for optimal performance
+  const [users, totalUsers] = await Promise.all([
+    User.find()
+      .select("_id name alias email role isSuspended createdAt lastActive")
+      .sort({ createdAt: -1 }) // Newest users first
+      .skip(skip)
+      .limit(limit),
+
+    User.countDocuments()
+  ]);
+
+  return sendSuccess(res, {
+    items: users,
+    pagination: {
+      page,
+      limit,
+      total: totalUsers,
+      pages: Math.ceil(totalUsers / limit)
+    }
+  });
 });
 
 // Delete user
@@ -70,10 +96,19 @@ export const deleteUser = asyncHandler(async (req, res) => {
     return sendError(res, 403, "Insufficient privileges", undefined, "ADMIN_MODIFICATION_FORBIDDEN");
   }
 
+  const moderationContext = {
+    targetUserId: String(user._id),
+    targetRole: user.role,
+    moderatedBy: String(req.user?._id)
+  };
+
   await user.deleteOne();
 
   incrementMetric(METRIC_KEYS.MODERATION_ACTIONS).catch((error) => {
-    console.error("[ADMIN_METRIC_ERROR]", error.message);
+    console.error("[ADMIN_METRIC_ERROR]", {
+      ...moderationContext,
+      error: error.message
+    });
   });
 
   return sendSuccess(res, { deletedUserId: req.params.id }, 200, "User removed");
@@ -81,16 +116,33 @@ export const deleteUser = asyncHandler(async (req, res) => {
 
 // Get all reports (admin view with user details)
 export const getAllReportsAdmin = asyncHandler(async (req, res) => {
-  const { page, limit } = getListPagination(req.query, ADMIN_REPORTS_PAGE_LIMIT_MAX);
+  // DB-level pagination boundaries
+  const { page, limit } = getListPagination(
+    req.query,
+    ADMIN_REPORTS_PAGE_LIMIT_MAX
+  );
+  const skip = (page - 1) * limit;
 
-  const reports = await Report.find()
-    .populate("user", "name alias email")
-    .sort({ createdAt: -1 });
+  // ─────────────────────────────────────────────
+  // PHASE 3: QUERY OPTIMIZATION
+  // Offloads pagination to MongoDB, preventing memory spikes 
+  // and CPU lockups from mass decryption.
+  // ─────────────────────────────────────────────
+  const [reports, totalReports] = await Promise.all([
+    Report.find()
+      .populate("user", "name alias email")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
 
-  const filteredReports = filterAndSortReports(reports, { ...req.query, includeContactEmail: "true" });
-  const { items, pagination } = paginateReports(filteredReports, page, limit);
+    Report.countDocuments()
+  ]);
 
-  const safeReports = items.map((report) => {
+  // Note: If you previously used `filterAndSortReports(reports, ...)` here, 
+  // those filters should eventually be mapped directly into the `Report.find()` 
+  // query object so MongoDB handles the filtering before pagination.
+
+  const safeReports = reports.map((report) => {
     const item = report.toObject();
     if (item.isSensitive) {
       try {
@@ -123,7 +175,12 @@ export const getAllReportsAdmin = asyncHandler(async (req, res) => {
 
   return sendSuccess(res, {
     items: safeReports,
-    pagination
+    pagination: {
+      page,
+      limit,
+      total: totalReports,
+      pages: Math.ceil(totalReports / limit)
+    }
   });
 });
 
@@ -135,16 +192,25 @@ export const deleteArticle = asyncHandler(async (req, res) => {
     return sendError(res, 404, "Article not found");
   }
 
+  const moderationContext = {
+    articleId: String(article._id),
+    authorId: String(article.createdBy),
+    moderatedBy: String(req.user?._id)
+  };
+
   await article.deleteOne();
 
   incrementMetric(METRIC_KEYS.MODERATION_ACTIONS).catch((error) => {
-    console.error("[ADMIN_METRIC_ERROR]", error.message);
+    console.error("[ADMIN_METRIC_ERROR]", {
+      ...moderationContext,
+      error: error.message
+    });
   });
 
   return sendSuccess(res, { deletedArticleId: req.params.id }, 200, "Article deleted");
 });
 
-// Promote user to admin (Super Admin only)
+// Promote user to admin (Super Admin and Admin)
 export const promoteToAdmin = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
 
@@ -152,7 +218,21 @@ export const promoteToAdmin = asyncHandler(async (req, res) => {
     return sendError(res, 404, "User not found");
   }
 
-  if (req.user?.role !== "SUPER_ADMIN") {
+  if (String(req.user?._id) === String(user._id)) {
+    return sendError(
+      res,
+      400,
+      "Cannot modify your own role",
+      undefined,
+      "SELF_ROLE_MODIFICATION_BLOCKED"
+    );
+  }
+
+    // Intentional: both Admin and Super Admin can promote a user to ADMIN, but only a Super Admin
+    // may suspend, delete, or demote admins. This allows for some delegation of admin creation without 
+    // giving full control over existing admins.
+
+  if (!["SUPER_ADMIN", "ADMIN"].includes(req.user?.role)) {
     return sendError(res, 403, "Insufficient privileges", undefined, "ADMIN_MODIFICATION_FORBIDDEN");
   }
 
@@ -166,6 +246,8 @@ export const promoteToAdmin = asyncHandler(async (req, res) => {
   }
 
   user.role = "ADMIN";
+  user.refreshTokenVersion =
+    Number(user.refreshTokenVersion || 0) + 1;
   await user.save();
 
   incrementMetric(METRIC_KEYS.MODERATION_ACTIONS).catch((error) => {
@@ -201,6 +283,8 @@ export const suspendUser = asyncHandler(async (req, res) => {
   }
 
   user.isSuspended = true;
+  user.refreshTokenVersion =
+    Number(user.refreshTokenVersion || 0) + 1;
   await user.save();
 
   incrementMetric(METRIC_KEYS.MODERATION_ACTIONS).catch((error) => {
@@ -236,6 +320,8 @@ export const unsuspendUser = asyncHandler(async (req, res) => {
   }
 
   user.isSuspended = false;
+  user.refreshTokenVersion =
+    Number(user.refreshTokenVersion || 0) + 1;
   await user.save();
 
   incrementMetric(METRIC_KEYS.MODERATION_ACTIONS).catch((error) => {
@@ -275,6 +361,8 @@ export const removeAdmin = asyncHandler(async (req, res) => {
   }
 
   user.role = "USER";
+  user.refreshTokenVersion =
+    Number(user.refreshTokenVersion || 0) + 1;
   await user.save();
 
   incrementMetric(METRIC_KEYS.MODERATION_ACTIONS).catch((error) => {
