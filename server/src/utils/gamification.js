@@ -67,7 +67,7 @@ export const addXP = async (userId, action) => {
   const updatedUser = await User.findByIdAndUpdate(
     userId,
     { $inc: { xp: xpToAdd } },
-    { new: true }
+    { returnDocument: "after" }
   );
 
   if (!updatedUser) return null;
@@ -85,7 +85,7 @@ export const addXP = async (userId, action) => {
   }
 
   if (Object.keys(updatePayload).length > 0) {
-    return User.findByIdAndUpdate(userId, { $set: updatePayload }, { new: true });
+    return User.findByIdAndUpdate(userId, { $set: updatePayload }, { returnDocument: "after" });
   }
 
   return updatedUser;

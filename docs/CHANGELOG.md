@@ -50,6 +50,37 @@ Legacy and overlapping logs were archived to docs/archive.
 - 0 breaking changes to client APIs
 - All changes backward compatible with existing deployments
 
+### 🧩 Recent Auth Addendum
+- **Auth hardening commit**: `92c5dfc`
+- **Auth middleware**: Added strict bearer token parsing, response-based auth failures, and observability for suspended or invalid token attempts.
+- **Auth flows**: Hardened login, OTP, refresh, logout, and password-reset flows with anti-enumeration responses, atomic refresh-token rotation, and security logging.
+- **Limiter updates**: Added refresh limiter protection and enabled `skipSuccessfulRequests` for login, OTP verification, and refresh requests.
+- **Docs merge**: Consolidated the duplicate summary previously kept in `docs/logs.md` into this canonical changelog.
+
+### 🔑 JWT Helper Hardening
+- **Token generation**: Hardened `server/src/utils/generateToken.js` with fail-fast env checks for `JWT_SECRET` and `JWT_REFRESH_SECRET`.
+- **Validation**: Added strict user-id validation, refresh-token version checks, and HS256 signing with `issuer: "cybershield"` for both access and refresh tokens.
+- **Reliability**: Reduced accidental misconfiguration risk by failing immediately when required JWT settings are missing.
+
+### 🧰 Runtime Logging and Error Boundary Cleanup
+- **Shared logger adoption**: Added `server/src/utils/logger.js` status/warn/error helpers and routed auth, AI, DB, and server runtime messages through the shared utility.
+- **Global error path**: Converted the request error boundary to `globalErrorHandler`, and kept the AI/auth controllers on `asyncHandler` so rejected async work stays centralized.
+- **AI side effects**: Kept scan metrics and XP side effects non-blocking while logging failures through the shared logger instead of ad hoc console calls.
+
+### 🧩 Mongoose Update Option Cleanup
+- **Return semantics**: Replaced remaining `new: true` options with `returnDocument: "after"` in the reward and progression helpers and the refresh/session update path.
+- **Token normalization**: Updated JWT helper validation so valid Mongo ObjectId values are accepted after presence checks, while undefined/null/empty-like values still fail fast.
+
+### 🍪 Refresh Cookie Policy
+- **Cookie scope**: Tightened refresh-token cookies to `sameSite: "strict"` and `priority: "high"` in `server/src/utils/authCookies.js`.
+- **Logout consistency**: Updated cookie clearing to use explicit options so logout clears the refresh cookie with the same hardened scope.
+- **Exposure reduction**: The stricter cookie policy reduces cross-site refresh-token exposure while keeping the existing `/api/auth` path boundary.
+
+### 🧪 QA Smoke Snapshot
+- **Report**: `docs/qa-report.md`
+- **Latest result**: 8 passed, 1 failed, 9 total
+- **Failure**: `POST /api/ai/predict` returned HTTP 500 with masked message `AI service failed` during the production smoke run.
+
 ---
 
 ## Day 61

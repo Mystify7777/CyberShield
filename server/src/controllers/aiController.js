@@ -1,32 +1,39 @@
 import { analyzeText } from "../services/aiService.js";
-import { validationResult } from "express-validator";
-import { sendError, sendSuccess } from "../utils/response.js";
+import asyncHandler from "../utils/asyncHandler.js";
+import { sendSuccess } from "../utils/response.js";
 import { addXP } from "../utils/gamification.js";
 import { incrementMetric, METRIC_KEYS } from "../utils/metrics.js";
+import { logError } from "../utils/logger.js";
 
-export const detectScam = async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return sendError(res, 400, "Validation failed", errors.array());
-    }
+// ─────────────────────────────────────────────
+// CONTROLLER
+// ─────────────────────────────────────────────
+export const detectScam = asyncHandler(async (req, res) => {
+  const text = req.body?.text;
 
-    const text = String(req.body?.text || "").trim();
+  // 1. Execute core business logic
+  const result = await analyzeText(text);
 
-    const result = await analyzeText(text);
-    await incrementMetric(METRIC_KEYS.AI_SCANS_RUN);
+  // 2. Execute non-blocking side effects
+  // Core path must not fail if +5 XP cannot be awarded.
+  await incrementMetric(METRIC_KEYS.AI_SCANS_RUN).catch((sideEffectError) => {
+    logError("AI_CONTROLLER_SIDE_EFFECT", "Metric increment failed", sideEffectError);
+  });
 
-    const label = String(result?.label || "").toUpperCase();
-    if (label === "SUSPICIOUS" || label === "MALICIOUS") {
-      await incrementMetric(METRIC_KEYS.THREATS_FLAGGED);
-    }
+  const label = String(result?.label || "").toUpperCase();
 
-    if (req.user?._id) {
-      await addXP(req.user._id, "AI_USED");
-    }
-
-    return sendSuccess(res, result);
-  } catch (error) {
-    return sendError(res, 500, error.message);
+  if (label === "SUSPICIOUS" || label === "MALICIOUS") {
+    await incrementMetric(METRIC_KEYS.THREATS_FLAGGED).catch((sideEffectError) => {
+      logError("AI_CONTROLLER_SIDE_EFFECT", "Threat metric increment failed", sideEffectError);
+    });
   }
-};
+
+  if (req.user?._id) {
+    await addXP(req.user._id, "AI_USED").catch((sideEffectError) => {
+      logError("AI_CONTROLLER_SIDE_EFFECT", "XP award failed", sideEffectError);
+    });
+  }
+
+  // 3. Return success
+  return sendSuccess(res, result);
+});

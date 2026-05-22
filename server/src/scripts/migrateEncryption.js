@@ -1,9 +1,18 @@
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({
+  path: path.resolve(__dirname, "../../.env"),
+});
 import mongoose from "mongoose";
 import Report from "../models/Report.js";
 import { decrypt, encrypt } from "../utils/encryption.js";
 
-dotenv.config();
+// dotenv.config();
 
 const BATCH_SIZE = 100;
 

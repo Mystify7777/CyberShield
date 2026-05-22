@@ -123,8 +123,19 @@ export const getReports = async (req, res) => {
       pagination
     });
   } catch (error) {
-    return sendError(res, 500, error.message);
-  }
+  console.error(
+    "[REPORT FETCH ERROR]",
+    error
+  );
+
+  console.error(error.stack);
+
+  return sendError(
+    res,
+    500,
+    error.message
+  );
+}
 };
 
 // Get current user's own reports (detailed view)
