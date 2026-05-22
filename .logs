@@ -6,6 +6,15 @@
   "entries": [
     {
       "date": "2026-05-22",
+      "category": "Security",
+      "title": "Upload middleware stabilization",
+      "description": "Hardened upload validation with frozen MIME allowlists, magic-byte verification, a 25 MB absolute upload cap, explicit wx persistence writes, and visible delete-failure logging.",
+      "files": ["server/src/middlewares/uploadMiddleware.js"],
+      "priority": "high",
+      "status": "completed"
+    },
+    {
+      "date": "2026-05-22",
       "category": "Bugfix",
       "title": "Report side-effect observability",
       "description": "Replaced generic catch logging in report creation and status updates with per-result Promise.allSettled logging so each rejected side effect is identified by its own failure reason.",
@@ -79,11 +88,11 @@
   ],
   "recent": {
     "date": "2026-05-22",
-    "category": "Bugfix",
-    "title": "Report side-effect observability",
-    "description": "Replaced generic catch logging in report creation and status updates with per-result Promise.allSettled logging so each rejected side effect is identified by its own failure reason.",
-    "files": ["server/src/controllers/reportController.js"],
-    "priority": "medium",
+    "category": "Security",
+    "title": "Upload middleware stabilization",
+    "description": "Hardened upload validation with frozen MIME allowlists, magic-byte verification, a 25 MB absolute upload cap, explicit wx persistence writes, and visible delete-failure logging.",
+    "files": ["server/src/middlewares/uploadMiddleware.js"],
+    "priority": "high",
     "status": "completed",
     "commit": null
   }
