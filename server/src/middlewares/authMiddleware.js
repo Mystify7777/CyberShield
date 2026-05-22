@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { sendError } from "../utils/response.js";
+import { logWarn } from "../utils/logger.js";
 
 // ─────────────────────────────────────────────
 // HELPER: ROBUST TOKEN EXTRACTION
@@ -41,7 +42,7 @@ export const protect = async (req, res, next) => {
     }
 
     if (user.isSuspended) {
-      console.warn("[AUTH_MIDDLEWARE] Suspended user access attempt", {
+      logWarn("AUTH_MIDDLEWARE", "Suspended user access attempt", {
         userId: String(user._id),
       });
       return sendError(res, 403, "Account suspended", undefined, "ACCOUNT_SUSPENDED");
@@ -52,7 +53,7 @@ export const protect = async (req, res, next) => {
     return next();
 
   } catch (error) {
-    console.warn("[AUTH_MIDDLEWARE] Invalid token", {
+    logWarn("AUTH_MIDDLEWARE", "Invalid token", {
       message: error.message,
     });
     return sendError(res, 401, "Not authorized", undefined, "AUTH_REQUIRED");
@@ -75,7 +76,7 @@ export const optionalProtect = async (req, res, next) => {
 
     if (user) {
       if (user.isSuspended) {
-        console.warn("[AUTH_MIDDLEWARE] Suspended optional auth attempt", {
+        logWarn("AUTH_MIDDLEWARE", "Suspended optional auth attempt", {
           userId: String(user._id),
         });
         return next();
@@ -85,7 +86,7 @@ export const optionalProtect = async (req, res, next) => {
     }
   } catch (error) {
     // Closes the observability blind spot while keeping the endpoint public
-    console.warn("[AUTH_MIDDLEWARE] Optional auth token invalid", {
+    logWarn("AUTH_MIDDLEWARE", "Optional auth token invalid", {
       message: error.message,
     });
   }

@@ -21,7 +21,7 @@ import userRoutes from "./routes/userRoutes.js";
 import trustScanRoutes from "./routes/trustScanRoutes.js";
 import { sanitizeMiddleware } from "./middlewares/sanitizeMiddleware.js";
 import { xssMiddleware } from "./middlewares/xssMiddleware.js";
-import { errorHandler } from "./middlewares/errorMiddleware.js";
+import { globalErrorHandler } from "./middlewares/errorMiddleware.js";
 import { isDebugLogsEnabled, logInfo } from "./utils/logger.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -148,6 +148,6 @@ app.get("/", (req, res) => {
 	res.send("API is running...");
 });
 
-app.use(errorHandler);
+app.use(globalErrorHandler);
 
 export default app;

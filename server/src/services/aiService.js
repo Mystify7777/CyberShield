@@ -1,4 +1,5 @@
 import axios from "axios";
+import { logError, logInfo, logWarn } from "../utils/logger.js";
 
 const RAW_URL = process.env.NODE_ENV === "production"
   ? process.env.AI_SERVICE_URL
@@ -106,7 +107,7 @@ export const analyzeText = async (rawText) => {
         throw primaryError;
       }
 
-      console.warn(`[AI] Primary call failed (${primaryError.code || primaryError.message}). Attempting fallback.`);
+      logWarn("AI", `Primary call failed (${primaryError.code || primaryError.message}). Attempting fallback.`);
       source = "fallback-ai";
       rawData = await callFallbackAI(text);
 
@@ -116,13 +117,13 @@ export const analyzeText = async (rawText) => {
     }
 
     const latencyMs = Date.now() - startedAt;
-    console.log(`[AI] classify completed in ${latencyMs}ms via ${source}`);
+    logInfo("AI", `classify completed in ${latencyMs}ms via ${source}`);
     return normalizeResponse(rawData, source, latencyMs);
   } catch (error) {
     const latencyMs = Date.now() - startedAt;
     const classified = classifyError(error);
 
-    console.error(`[AI] classify failed after ${latencyMs}ms`, {
+    logError("AI", `classify failed after ${latencyMs}ms`, {
       type: classified.type,
       retryable: classified.retryable,
       source,
