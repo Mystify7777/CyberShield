@@ -5,12 +5,12 @@ import { addCoins, enforceActionCooldown, spendCoins } from "../utils/economy.js
 import { sendError, sendSuccess } from "../utils/response.js";
 import { incrementMetric, METRIC_KEYS } from "../utils/metrics.js";
 import { deleteUploadedFile, persistUploadedFile, validateFile } from "../middlewares/uploadMiddleware.js";
+import asyncHandler from "../utils/asyncHandler.js";
 
 const FLAG_MIN_TOTAL_VOTES = 20;
 const FLAG_DOWNVOTE_RATIO = 1.5;
 
-export const createMeme = async (req, res) => {
-  try {
+export const createMeme = asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return sendError(res, 400, "Validation failed", errors.array());
@@ -41,32 +41,24 @@ export const createMeme = async (req, res) => {
     await addCoins(req.user._id, "MEME_CREATED");
 
     return sendSuccess(res, meme, 201, "Meme uploaded");
-  } catch (error) {
-    return sendError(res, 500, error.message);
+});
+
+export const getMemes = asyncHandler(async (req, res) => {
+  const sort = req.query.sort || "latest";
+
+  let query = Meme.find({ status: "VISIBLE" }).populate("createdBy", "name alias");
+
+  if (sort === "trending") {
+    query = query.sort({ upvotes: -1, createdAt: -1 });
+  } else {
+    query = query.sort({ createdAt: -1 });
   }
-};
 
-export const getMemes = async (req, res) => {
-  try {
-    const sort = req.query.sort || "latest";
+  const memes = await query;
+  return sendSuccess(res, memes);
+});
 
-    let query = Meme.find({ status: "VISIBLE" }).populate("createdBy", "name alias");
-
-    if (sort === "trending") {
-      query = query.sort({ upvotes: -1, createdAt: -1 });
-    } else {
-      query = query.sort({ createdAt: -1 });
-    }
-
-    const memes = await query;
-    return sendSuccess(res, memes);
-  } catch (error) {
-    return sendError(res, 500, error.message);
-  }
-};
-
-export const voteMeme = async (req, res) => {
-  try {
+export const voteMeme = asyncHandler(async (req, res) => {
     const { type } = req.body;
 
     if (!["up", "down"].includes(type)) {
@@ -137,46 +129,35 @@ export const voteMeme = async (req, res) => {
     }
 
     return sendSuccess(res, meme, 200, "Vote recorded");
-  } catch (error) {
-    return sendError(res, 500, error.message);
+});
+
+export const getFlaggedMemes = asyncHandler(async (req, res) => {
+  const memes = await Meme.find({ status: "FLAGGED" })
+    .populate("createdBy", "name alias email")
+    .sort({ updatedAt: -1 });
+
+  return sendSuccess(res, memes);
+});
+
+export const updateMeme = asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return sendError(res, 400, "Validation failed", errors.array());
   }
-};
 
-export const getFlaggedMemes = async (req, res) => {
-  try {
-    const memes = await Meme.find({ status: "FLAGGED" })
-      .populate("createdBy", "name alias email")
-      .sort({ updatedAt: -1 });
-
-    return sendSuccess(res, memes);
-  } catch (error) {
-    return sendError(res, 500, error.message);
+  const meme = await Meme.findById(req.params.id);
+  if (!meme) {
+    return sendError(res, 404, "Meme not found");
   }
-};
 
-export const updateMeme = async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return sendError(res, 400, "Validation failed", errors.array());
-    }
+  const { status, votingEnabled, commentsEnabled } = req.body;
 
-    const meme = await Meme.findById(req.params.id);
-    if (!meme) {
-      return sendError(res, 404, "Meme not found");
-    }
+  if (status) meme.status = status;
+  if (typeof votingEnabled === "boolean") meme.votingEnabled = votingEnabled;
+  if (typeof commentsEnabled === "boolean") meme.commentsEnabled = commentsEnabled;
 
-    const { status, votingEnabled, commentsEnabled } = req.body;
+  await meme.save();
+  await incrementMetric(METRIC_KEYS.MODERATION_ACTIONS);
 
-    if (status) meme.status = status;
-    if (typeof votingEnabled === "boolean") meme.votingEnabled = votingEnabled;
-    if (typeof commentsEnabled === "boolean") meme.commentsEnabled = commentsEnabled;
-
-    await meme.save();
-    await incrementMetric(METRIC_KEYS.MODERATION_ACTIONS);
-
-    return sendSuccess(res, meme, 200, "Meme updated");
-  } catch (error) {
-    return sendError(res, 500, error.message);
-  }
-};
+  return sendSuccess(res, meme, 200, "Meme updated");
+});

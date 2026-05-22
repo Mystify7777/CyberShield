@@ -2,6 +2,7 @@ import ForumPost from "../models/ForumPost.js";
 import { addXP } from "../utils/gamification.js";
 import { spendCoins } from "../utils/economy.js";
 import { sendError, sendSuccess } from "../utils/response.js";
+import asyncHandler from "../utils/asyncHandler.js";
 
 const FORUM_PAGE_LIMIT_MAX = 50;
 
@@ -17,8 +18,7 @@ const getForumPagination = (query) => {
   return { page, limit };
 };
 
-export const createPost = async (req, res) => {
-  try {
+export const createPost = asyncHandler(async (req, res) => {
     try {
       await spendCoins(req.user._id, "FORUM_POST");
     } catch (economyError) {
@@ -34,13 +34,9 @@ export const createPost = async (req, res) => {
     await addXP(req.user._id, "FORUM_POST");
 
     return sendSuccess(res, post, 201);
-  } catch (error) {
-    return sendError(res, 500, error.message);
-  }
-};
+});
 
-export const addReply = async (req, res) => {
-  try {
+export const addReply = asyncHandler(async (req, res) => {
     try {
       await spendCoins(req.user._id, "COMMENT");
     } catch (economyError) {
@@ -60,68 +56,57 @@ export const addReply = async (req, res) => {
 
     await post.save();
     return sendSuccess(res, post);
-  } catch (error) {
-    return sendError(res, 500, error.message);
-  }
-};
+});
 
-export const getAllPosts = async (req, res) => {
-  try {
-    const { page, limit } = getForumPagination(req.query);
-    const skip = (page - 1) * limit;
+export const getAllPosts = asyncHandler(async (req, res) => {
+  const { page, limit } = getForumPagination(req.query);
+  const skip = (page - 1) * limit;
 
-    const [posts, total] = await Promise.all([
-      ForumPost.find()
-        .populate("user", "name alias")
-        .populate("replies.user", "name alias")
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit),
-      ForumPost.countDocuments()
-    ]);
+  const [posts, total] = await Promise.all([
+    ForumPost.find()
+      .populate("user", "name alias")
+      .populate("replies.user", "name alias")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    ForumPost.countDocuments()
+  ]);
 
-    return sendSuccess(res, {
-      items: posts,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: total > 0 ? Math.ceil(total / limit) : 0,
-        hasNextPage: page * limit < total
-      }
-    });
-  } catch (error) {
-    return sendError(res, 500, error.message);
-  }
-};
+  return sendSuccess(res, {
+    items: posts,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: total > 0 ? Math.ceil(total / limit) : 0,
+      hasNextPage: page * limit < total
+    }
+  });
+});
 
-export const getMyPosts = async (req, res) => {
-  try {
-    const { page, limit } = getForumPagination(req.query);
-    const skip = (page - 1) * limit;
-    const match = { user: req.user._id };
+export const getMyPosts = asyncHandler(async (req, res) => {
+  const { page, limit } = getForumPagination(req.query);
+  const skip = (page - 1) * limit;
+  const match = { user: req.user._id };
 
-    const [posts, total] = await Promise.all([
-      ForumPost.find(match)
-        .populate("user", "name alias")
-        .populate("replies.user", "name alias")
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit),
-      ForumPost.countDocuments(match)
-    ]);
+  const [posts, total] = await Promise.all([
+    ForumPost.find(match)
+      .populate("user", "name alias")
+      .populate("replies.user", "name alias")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    ForumPost.countDocuments(match)
+  ]);
 
-    return sendSuccess(res, {
-      items: posts,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: total > 0 ? Math.ceil(total / limit) : 0,
-        hasNextPage: page * limit < total
-      }
-    });
-  } catch (error) {
-    return sendError(res, 500, error.message);
-  }
-};
+  return sendSuccess(res, {
+    items: posts,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: total > 0 ? Math.ceil(total / limit) : 0,
+      hasNextPage: page * limit < total
+    }
+  });
+});

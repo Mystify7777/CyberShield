@@ -19,6 +19,7 @@ import {
 } from "../services/trustscan/factorBuilders.js";
 import { calculateScoreAndVerdict } from "../services/trustscan/scoringService.js";
 import { buildTrustScanSummary } from "../services/trustscan/summaryService.js";
+import asyncHandler from "../utils/asyncHandler.js";
 
 const TRUSTSCAN_CACHE_TTL_MS = 10 * 60 * 1000;
 const trustScanReportCache = new Map();
@@ -304,74 +305,69 @@ const getTrustScanValidationMessage = (errors) => {
   return "Validation failed";
 };
 
-export const createTrustScan = async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      const validationErrors = errors.array();
-      return sendError(
-        res,
-        400,
-        getTrustScanValidationMessage(validationErrors),
-        validationErrors
-      );
-    }
-
-    const { url } = req.body;
-
-    if (!url || typeof url !== "string" || !url.trim()) {
-      return sendError(res, 400, "Valid URL is required");
-    }
-
-    const normalized = getNormalizedDomain(url.trim());
-    if (!normalized) {
-      return sendError(res, 400, "Invalid URL format");
-    }
-
-    // Per-user rate limit: max 5 scans per hour
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    const recentScans = await countRecentTrustScans(req.user._id, oneHourAgo);
-
-    if (recentScans >= 5) {
-      return sendError(res, 429, "Rate limit exceeded: maximum 5 scans per hour");
-    }
-
-    // Check for duplicate scan (prevent duplicate processing)
-    const existingJob = await TrustScanJob.findOne({
-      userId: req.user._id,
-      normalizedDomain: normalized.normalizedDomain,
-      status: "running",
-      createdAt: { $gte: new Date(Date.now() - 30 * 1000) } // within last 30 seconds
-    });
-
-    if (existingJob) {
-      return sendError(res, 409, "A scan for this URL is already in progress");
-    }
-
-    const now = new Date();
-
-    const job = await TrustScanJob.create({
-      userId: req.user._id,
-      url: normalized.url,
-      normalizedDomain: normalized.normalizedDomain,
-      status: "running",
-      startedAt: now
-    });
-
-    return sendSuccess(res, {
-      jobId: job._id,
-      status: job.status,
-      url: job.url,
-      normalizedDomain: job.normalizedDomain,
-      etaSeconds: Math.ceil(MOCK_SCAN_DURATION_MS / 1000)
-    }, 201, "TrustScan job created");
-  } catch (error) {
-    console.error("CREATE TRUSTSCAN ERROR:", error);
-    return sendError(res, 500, "Failed to create TrustScan job");
+export const createTrustScan = asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const validationErrors = errors.array();
+    return sendError(
+      res,
+      400,
+      getTrustScanValidationMessage(validationErrors),
+      validationErrors
+    );
   }
-};
 
-export const getTrustScanById = async (req, res) => {
+  const { url } = req.body;
+
+  if (!url || typeof url !== "string" || !url.trim()) {
+    return sendError(res, 400, "Valid URL is required");
+  }
+
+  const normalized = getNormalizedDomain(url.trim());
+  if (!normalized) {
+    return sendError(res, 400, "Invalid URL format");
+  }
+
+  // Per-user rate limit: max 5 scans per hour
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  const recentScans = await countRecentTrustScans(req.user._id, oneHourAgo);
+
+  if (recentScans >= 5) {
+    return sendError(res, 429, "Rate limit exceeded: maximum 5 scans per hour");
+  }
+
+  // Check for duplicate scan (prevent duplicate processing)
+  const existingJob = await TrustScanJob.findOne({
+    userId: req.user._id,
+    normalizedDomain: normalized.normalizedDomain,
+    status: "running",
+    createdAt: { $gte: new Date(Date.now() - 30 * 1000) } // within last 30 seconds
+  });
+
+  if (existingJob) {
+    return sendError(res, 409, "A scan for this URL is already in progress");
+  }
+
+  const now = new Date();
+
+  const job = await TrustScanJob.create({
+    userId: req.user._id,
+    url: normalized.url,
+    normalizedDomain: normalized.normalizedDomain,
+    status: "running",
+    startedAt: now
+  });
+
+  return sendSuccess(res, {
+    jobId: job._id,
+    status: job.status,
+    url: job.url,
+    normalizedDomain: job.normalizedDomain,
+    etaSeconds: Math.ceil(MOCK_SCAN_DURATION_MS / 1000)
+  }, 201, "TrustScan job created");
+});
+
+export const getTrustScanById = asyncHandler(async (req, res) => {
   try {
     const job = await TrustScanJob.findOne({
       _id: req.params.id,
@@ -405,56 +401,48 @@ export const getTrustScanById = async (req, res) => {
       message: error.message
     });
   }
-};
+});
 
-export const getTrustScanHistory = async (req, res) => {
-  try {
-    const rawPage = Number.parseInt(req.query.page, 10);
-    const rawLimit = Number.parseInt(req.query.limit, 10);
+export const getTrustScanHistory = asyncHandler(async (req, res) => {
+  const rawPage = Number.parseInt(req.query.page, 10);
+  const rawLimit = Number.parseInt(req.query.limit, 10);
 
-    const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
-    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 20) : 10;
-    const skip = (page - 1) * limit;
+  const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 20) : 10;
+  const skip = (page - 1) * limit;
 
-    const [items, total] = await Promise.all([
-      TrustScanReport.find({ userId: req.user._id })
-        .select("jobId url normalizedDomain score verdict summary createdAt")
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      TrustScanReport.countDocuments({ userId: req.user._id })
-    ]);
+  const [items, total] = await Promise.all([
+    TrustScanReport.find({ userId: req.user._id })
+      .select("jobId url normalizedDomain score verdict summary createdAt")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    TrustScanReport.countDocuments({ userId: req.user._id })
+  ]);
 
-    const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
+  const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
 
-    return sendSuccess(res, {
-      items,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages,
-        hasNextPage: page * limit < total
-      }
-    });
-  } catch (error) {
-    return sendError(res, 500, error.message);
-  }
-};
-
-export const getPublicTrustScanReport = async (req, res) => {
-  try {
-    const report = await TrustScanReport.findById(req.params.id);
-
-    if (!report) {
-      return sendError(res, 404, "Report not found");
+  return sendSuccess(res, {
+    items,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages,
+      hasNextPage: page * limit < total
     }
+  });
+});
 
-    return sendSuccess(res, {
-      report: report.toObject()
-    });
-  } catch (error) {
-    return sendError(res, 500, error.message);
+export const getPublicTrustScanReport = asyncHandler(async (req, res) => {
+  const report = await TrustScanReport.findById(req.params.id);
+
+  if (!report) {
+    return sendError(res, 404, "Report not found");
   }
-};
+
+  return sendSuccess(res, {
+    report: report.toObject()
+  });
+});
