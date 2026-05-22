@@ -62,6 +62,15 @@ Legacy and overlapping logs were archived to docs/archive.
 - **Validation**: Added strict user-id validation, refresh-token version checks, and HS256 signing with `issuer: "cybershield"` for both access and refresh tokens.
 - **Reliability**: Reduced accidental misconfiguration risk by failing immediately when required JWT settings are missing.
 
+### 🧰 Runtime Logging and Error Boundary Cleanup
+- **Shared logger adoption**: Added `server/src/utils/logger.js` status/warn/error helpers and routed auth, AI, DB, and server runtime messages through the shared utility.
+- **Global error path**: Converted the request error boundary to `globalErrorHandler`, and kept the AI/auth controllers on `asyncHandler` so rejected async work stays centralized.
+- **AI side effects**: Kept scan metrics and XP side effects non-blocking while logging failures through the shared logger instead of ad hoc console calls.
+
+### 🧩 Mongoose Update Option Cleanup
+- **Return semantics**: Replaced remaining `new: true` options with `returnDocument: "after"` in the reward and progression helpers and the refresh/session update path.
+- **Token normalization**: Updated JWT helper validation so valid Mongo ObjectId values are accepted after presence checks, while undefined/null/empty-like values still fail fast.
+
 ### 🍪 Refresh Cookie Policy
 - **Cookie scope**: Tightened refresh-token cookies to `sameSite: "strict"` and `priority: "high"` in `server/src/utils/authCookies.js`.
 - **Logout consistency**: Updated cookie clearing to use explicit options so logout clears the refresh cookie with the same hardened scope.
