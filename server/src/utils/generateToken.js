@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 
 const getAccessTokenExpiresIn = () => process.env.JWT_EXPIRES_IN || "15m";
 const getRefreshTokenExpiresIn = () => process.env.JWT_REFRESH_EXPIRES_IN || "7d";
+const JWT_ISSUER = process.env.JWT_ISSUER || "cybershield";
 
 const assertJwtSecrets = () => {
   if (!process.env.JWT_SECRET) {
@@ -54,13 +55,14 @@ export const generateToken = (id, expiresIn = getAccessTokenExpiresIn()) => {
 
   return jwt.sign(
     {
-      id: normalizedId
+      id: normalizedId,
+      tokenType: "access"
     },
     process.env.JWT_SECRET,
     {
       expiresIn,
       algorithm: "HS256",
-      issuer: "cybershield"
+      issuer: JWT_ISSUER
     }
   );
 };
@@ -86,13 +88,14 @@ export const generateRefreshToken = (
   return jwt.sign(
     {
       id: normalizedId,
-      version
+      version,
+      tokenType: "refresh"
     },
     process.env.JWT_REFRESH_SECRET,
     {
       expiresIn,
       algorithm: "HS256",
-      issuer: "cybershield"
+      issuer: JWT_ISSUER
     }
   );
 };

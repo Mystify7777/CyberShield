@@ -58,6 +58,7 @@ describe("Auth Routes", () => {
 
     process.env.JWT_SECRET = "test-jwt-secret";
     process.env.JWT_REFRESH_SECRET = "test-refresh-secret";
+    process.env.JWT_ISSUER = "cybershield";
     process.env.OTP_HASH_SECRET = "test-otp-secret";
     process.env.JWT_EXPIRES_IN = "15m";
     process.env.JWT_REFRESH_EXPIRES_IN = "7d";
@@ -73,6 +74,7 @@ describe("Auth Routes", () => {
     delete process.env.OTP_HASH_SECRET;
     delete process.env.JWT_SECRET;
     delete process.env.JWT_REFRESH_SECRET;
+    delete process.env.JWT_ISSUER;
     delete process.env.JWT_EXPIRES_IN;
     delete process.env.JWT_REFRESH_EXPIRES_IN;
   });
@@ -160,6 +162,11 @@ describe("Auth Routes", () => {
       }
     });
     expect(typeof res.body.data.accessToken).toBe("string");
+    expect(jwt.decode(res.body.data.accessToken)).toMatchObject({
+      id: "user_2",
+      tokenType: "access",
+      iss: "cybershield"
+    });
     expect(res.headers["set-cookie"]?.join(";") || "").toContain("cybershield_refresh_token=");
     expect(mocks.bcryptCompare).toHaveBeenCalledWith("secret123", "hashed-password");
     expect(mocks.addXP).toHaveBeenCalledTimes(1);
@@ -198,6 +205,12 @@ describe("Auth Routes", () => {
 
     const refreshCookie = loginResponse.headers["set-cookie"]?.[0];
     expect(refreshCookie).toContain("cybershield_refresh_token=");
+    const refreshToken = decodeURIComponent(refreshCookie.split(";")[0].split("=")[1]);
+    expect(jwt.decode(refreshToken)).toMatchObject({
+      id: "user_3",
+      tokenType: "refresh",
+      iss: "cybershield"
+    });
 
     const refreshResponse = await request(app)
       .post("/api/auth/refresh")
@@ -206,6 +219,11 @@ describe("Auth Routes", () => {
     expect(refreshResponse.status).toBe(200);
     expect(refreshResponse.body.success).toBe(true);
     expect(typeof refreshResponse.body.data.accessToken).toBe("string");
+    expect(jwt.decode(refreshResponse.body.data.accessToken)).toMatchObject({
+      id: "user_3",
+      tokenType: "access",
+      iss: "cybershield"
+    });
     expect(refreshResponse.headers["set-cookie"]?.[0]).toContain("cybershield_refresh_token=");
     expect(refreshResponse.body.data.user).toMatchObject({
       _id: "user_3",

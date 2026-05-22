@@ -3,6 +3,11 @@ import User from "../models/User.js";
 import { sendError } from "../utils/response.js";
 import { logWarn } from "../utils/logger.js";
 
+const JWT_VERIFY_OPTIONS = {
+  issuer: process.env.JWT_ISSUER || "cybershield",
+  algorithms: ["HS256"]
+};
+
 // ─────────────────────────────────────────────
 // HELPER: ROBUST TOKEN EXTRACTION
 // ─────────────────────────────────────────────
@@ -32,7 +37,14 @@ export const protect = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, JWT_VERIFY_OPTIONS);
+
+    if (decoded?.tokenType && decoded.tokenType !== "access") {
+      logWarn("AUTH_MIDDLEWARE", "Unexpected token type in protected route", {
+        tokenType: decoded.tokenType,
+      });
+      return sendError(res, 401, "Not authorized", undefined, "AUTH_REQUIRED");
+    }
 
     // Clean trust boundary semantics: fetch, validate, THEN assign to request
     const user = await User.findById(decoded.id).select("-password");
@@ -71,7 +83,15 @@ export const optionalProtect = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, JWT_VERIFY_OPTIONS);
+
+    if (decoded?.tokenType && decoded.tokenType !== "access") {
+      logWarn("AUTH_MIDDLEWARE", "Unexpected token type in optional auth", {
+        tokenType: decoded.tokenType,
+      });
+      return next();
+    }
+
     const user = await User.findById(decoded.id).select("-password");
 
     if (user) {
