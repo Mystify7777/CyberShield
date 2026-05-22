@@ -100,7 +100,7 @@ export const addCoins = async (userId, action) => {
           lastActions: user.lastActions
         }
       },
-      { new: true }
+      { returnDocument: "after" }
     );
   }
 
@@ -119,7 +119,7 @@ export const addCoins = async (userId, action) => {
           lastActions: user.lastActions
         }
       },
-      { new: true }
+      { returnDocument: "after" }
     );
   }
 
@@ -135,7 +135,7 @@ export const addCoins = async (userId, action) => {
         lastActions: user.lastActions
       }
     },
-    { new: true }
+    { returnDocument: "after" }
   );
 };
 
@@ -159,7 +159,7 @@ export const spendCoins = async (userId, action) => {
           lastActions: user.lastActions
         }
       },
-      { new: true }
+      { returnDocument: "after" }
     );
   }
 
@@ -172,7 +172,7 @@ export const spendCoins = async (userId, action) => {
         lastActions: user.lastActions
       }
     },
-    { new: true }
+    { returnDocument: "after" }
   );
 
   if (!updatedUser) {

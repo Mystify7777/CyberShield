@@ -3,13 +3,14 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { generateToken, generateRefreshToken } from "../utils/generateToken.js";
+import asyncHandler from "../utils/asyncHandler.js";
 import { validationResult } from "express-validator";
 import { sendError, sendSuccess } from "../utils/response.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { addXP } from "../utils/gamification.js";
 import { addCoins } from "../utils/economy.js";
 import { clearRefreshTokenCookie, getRefreshTokenFromRequest, setRefreshTokenCookie } from "../utils/authCookies.js";
-import { logError, logInfo, logWarn, maskEmail } from "../utils/logger.js";
+import { logInfo, logWarn, maskEmail } from "../utils/logger.js";
 
 const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
 const getOtpHashSecret = () => {
@@ -44,7 +45,7 @@ const issueSession = async (res, user, message = "Login successful") => {
   const sessionUser = await User.findByIdAndUpdate(
     user._id,
     { $inc: { refreshTokenVersion: 1 } },
-    { new: true }
+    { returnDocument: "after" }
   );
 
   // ─────────────────────────────────────────────
@@ -86,7 +87,7 @@ const rotateRefreshToken = async (user) => {
         },
       },
       {
-        new: true,
+        returnDocument: "after",
       }
     );
 
@@ -103,9 +104,19 @@ const rotateRefreshToken = async (user) => {
     updatedUser.refreshTokenVersion
   );
 };
+
+const verifyJwtToken = (token, secret) =>
+  new Promise((resolve) => {
+    jwt.verify(token, secret, (error, decoded) => {
+      if (error) {
+        return resolve({ error });
+      }
+
+      return resolve({ decoded });
+    });
+  });
 // Register
-export const registerUser = async (req, res) => {
-  try {
+export const registerUser = asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return sendError(res, 400, "Validation failed", errors.array());
@@ -162,15 +173,10 @@ export const registerUser = async (req, res) => {
       role: user.role,
       isVerified: user.isVerified
     }, 201);
-  } catch (error) {
-    logError("AUTH", "registerUser error", error?.message || error);
-    return sendError(res, 500, error.message);
-  }
-};
+});
 
 // Resend OTP
-export const resendOTP = async (req, res) => {
-  try {
+export const resendOTP = asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return sendError(res, 400, "Validation failed", errors.array());
@@ -212,15 +218,10 @@ export const resendOTP = async (req, res) => {
       200,
       "If the account exists, OTP has been sent"
     );
-  } catch (error) {
-    logError("AUTH", "resendOTP error", error?.message || error);
-    return sendError(res, 500, error.message);
-  }
-};
+});
 
 // Verify OTP
-export const verifyOTP = async (req, res) => {
-  try {
+export const verifyOTP = asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return sendError(res, 400, "Validation failed", errors.array());
@@ -288,15 +289,10 @@ export const verifyOTP = async (req, res) => {
     });
 
     return sendSuccess(res, { verified: true, attemptsRemaining: maxAttempts }, 200, "Account verified");
-  } catch (error) {
-    logError("AUTH", "verifyOTP error", error?.message || error);
-    return sendError(res, 500, error.message);
-  }
-};
+});
 
 // Login
-export const loginUser = async (req, res) => {
-  try {
+export const loginUser = asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return sendError(res, 400, "Validation failed", errors.array());
@@ -361,19 +357,25 @@ export const loginUser = async (req, res) => {
       );
       return sendError(res, 401, "Invalid credentials");
     }
-  } catch (error) {
-    return sendError(res, 500, error.message);
-  }
-};
+});
 
-export const refreshSession = async (req, res) => {
-  try {
+export const refreshSession = asyncHandler(async (req, res) => {
     const refreshToken = getRefreshTokenFromRequest(req);
     if (!refreshToken) {
       return sendError(res, 401, "No refresh token provided");
     }
 
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    const { error: tokenError, decoded } = await verifyJwtToken(refreshToken, process.env.JWT_REFRESH_SECRET);
+
+    if (tokenError) {
+      clearSessionCookie(res);
+
+      const authError = new Error("Not authorized");
+      authError.type = "AUTH_REQUIRED";
+      authError.status = 401;
+      throw authError;
+    }
+
     const user = await User.findById(decoded.id);
 
     if (!user) {
@@ -407,47 +409,33 @@ export const refreshSession = async (req, res) => {
       user: buildClientUser(user),
       accessToken
     }, 200, "Session refreshed");
-  } catch (error) {
-    clearSessionCookie(res);
-    return sendError(res, 401, "Not authorized");
-  }
-};
+});
 
-export const logoutUser = async (req, res) => {
-  try {
+export const logoutUser = asyncHandler(async (req, res) => {
     const refreshToken = getRefreshTokenFromRequest(req);
 
     if (refreshToken) {
-      try {
-        const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-        const user = await User.findById(decoded.id);
+      const { decoded } = await verifyJwtToken(refreshToken, process.env.JWT_REFRESH_SECRET);
+      const user = decoded ? await User.findById(decoded.id) : null;
 
-        if (user && Number(decoded.version) === Number(user.refreshTokenVersion || 0)) {
-          await User.findByIdAndUpdate(
-            user._id,
-            {
-              $inc: {
-                refreshTokenVersion: 1,
-              },
-            }
-          );
-        }
-      } catch {
-        // Logout should still succeed even if the refresh token is expired or malformed.
+      if (user && Number(decoded.version) === Number(user.refreshTokenVersion || 0)) {
+        await User.findByIdAndUpdate(
+          user._id,
+          {
+            $inc: {
+              refreshTokenVersion: 1,
+            },
+          }
+        );
       }
     }
 
     clearSessionCookie(res);
     return sendSuccess(res, { loggedOut: true }, 200, "Logged out");
-  } catch (error) {
-    clearSessionCookie(res);
-    return sendError(res, 500, error.message);
-  }
-};
+});
 
 // Forgot Password (request reset token)
-export const forgotPassword = async (req, res) => {
-  try {
+export const forgotPassword = asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return sendError(res, 400, "Validation failed", errors.array());
@@ -508,11 +496,7 @@ export const forgotPassword = async (req, res) => {
       200,
       "If the account exists, a reset token has been sent"
     );
-  } catch (error) {
-    logError("AUTH", "forgotPassword error", error?.message || error);
-    return sendError(res, 500, error.message);
-  }
-};
+});
 
 // Reset Password (using token)
 /**
@@ -520,8 +504,7 @@ export const forgotPassword = async (req, res) => {
  * Password reset must NOT modify moderation state (for example isSuspended).
  * Moderation flags are controlled only via admin flows.
  */
-export const resetPassword = async (req, res) => {
-  try {
+export const resetPassword = asyncHandler(async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return sendError(res, 400, "Validation failed", errors.array());
@@ -568,15 +551,11 @@ export const resetPassword = async (req, res) => {
     });
 
     return sendSuccess(res, { reset: true }, 200, "Password reset successful");
-  } catch (error) {
-    logError("AUTH", "resetPassword error", error?.message || error);
-    return sendError(res, 500, error.message);
-  }
-};
+});
 
-export const validateToken = async (req, res) => {
+export const validateToken = asyncHandler(async (req, res) => {
   return sendSuccess(res, {
     valid: true,
     user: buildClientUser(req.user)
   });
-};
+});

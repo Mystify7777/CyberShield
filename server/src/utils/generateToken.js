@@ -18,8 +18,26 @@ const getRefreshTokenExpiresIn = () => process.env.JWT_REFRESH_EXPIRES_IN || "7d
 // INPUT VALIDATION
 // ─────────────────────────────────────────────
 const assertValidUserId = (id) => {
-  if (typeof id !== "string" || !id.trim()) {
-    throw new Error("Valid user id required");
+  if (
+    id === undefined ||
+    id === null
+  ) {
+    throw new Error(
+      "Valid user id required"
+    );
+  }
+
+  const normalized =
+    String(id).trim();
+
+  if (
+    !normalized ||
+    normalized === "undefined" ||
+    normalized === "null"
+  ) {
+    throw new Error(
+      "Valid user id required"
+    );
   }
 };
 
@@ -30,9 +48,12 @@ export const generateToken = (id, expiresIn = getAccessTokenExpiresIn()) => {
   // Validate raw input BEFORE coercion
   assertValidUserId(id);
 
+  const normalizedId =
+    String(id);
+
   return jwt.sign(
     {
-      id: String(id)
+      id: normalizedId
     },
     process.env.JWT_SECRET,
     {
@@ -51,6 +72,9 @@ export const generateRefreshToken = (
   // Validate raw input BEFORE coercion
   assertValidUserId(id);
 
+  const normalizedId =
+    String(id);
+
   const version = Number(refreshTokenVersion);
   if (!Number.isInteger(version) || version < 0) {
     throw new Error("Valid refresh token version required");
@@ -58,7 +82,7 @@ export const generateRefreshToken = (
 
   return jwt.sign(
     {
-      id: String(id),
+      id: normalizedId,
       version
     },
     process.env.JWT_REFRESH_SECRET,
