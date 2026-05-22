@@ -39,6 +39,18 @@ export const protect = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET, JWT_VERIFY_OPTIONS);
 
+    if (!decoded?.id || typeof decoded.id !== "string") {
+      logWarn("AUTH_MIDDLEWARE", "Token payload missing valid user id");
+
+      return sendError(
+        res,
+        401,
+        "Not authorized",
+        undefined,
+        "AUTH_REQUIRED"
+      );
+    }
+
     if (decoded?.tokenType && decoded.tokenType !== "access") {
       logWarn("AUTH_MIDDLEWARE", "Unexpected token type in protected route", {
         tokenType: decoded.tokenType,
@@ -84,6 +96,15 @@ export const optionalProtect = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET, JWT_VERIFY_OPTIONS);
+
+    if (!decoded?.id || typeof decoded.id !== "string") {
+      logWarn(
+        "AUTH_MIDDLEWARE",
+        "Optional token payload missing valid user id"
+      );
+
+      return next();
+    }
 
     if (decoded?.tokenType && decoded.tokenType !== "access") {
       logWarn("AUTH_MIDDLEWARE", "Unexpected token type in optional auth", {
