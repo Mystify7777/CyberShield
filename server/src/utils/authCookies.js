@@ -4,10 +4,12 @@ const isProduction = process.env.NODE_ENV === "production";
 
 const refreshCookieOptions = {
   httpOnly: true,
+  // Requires trust proxy in production deployments behind reverse proxies
   secure: isProduction,
-  sameSite: "lax",
+  sameSite: "strict",
   path: "/api/auth",
-  maxAge: REFRESH_COOKIE_MAX_AGE_MS
+  maxAge: REFRESH_COOKIE_MAX_AGE_MS,
+  priority: "high",
 };
 
 export const getRefreshTokenFromRequest = (req) => {
@@ -29,7 +31,13 @@ export const setRefreshTokenCookie = (res, refreshToken) => {
 };
 
 export const clearRefreshTokenCookie = (res) => {
-  res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieOptions);
+  res.clearCookie(REFRESH_COOKIE_NAME, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: "strict",
+    path: "/api/auth",
+    priority: "high",
+  });
 };
 
 export const refreshCookieName = REFRESH_COOKIE_NAME;

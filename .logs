@@ -2,8 +2,17 @@
   "format": "Automated Changelog Log",
   "description": "Machine-readable changelog tracking all updates.",
   "categories": ["Frontend", "Backend", "Docs", "Config", "CI/CD", "Ops", "Planning", "Refactor", "Bugfix", "Feature", "Performance", "Other"],
-  "lastUpdated": "2026-05-21T00:00:00Z",
+  "lastUpdated": "2026-05-22T00:00:00Z",
   "entries": [
+    {
+      "date": "2026-05-22",
+      "category": "Backend",
+      "title": "Refresh cookie policy hardening",
+      "description": "Tightened refresh-token cookie settings to strict sameSite, high priority, and explicit clear-cookie options to reduce cross-site exposure and improve consistency during logout.",
+      "files": ["server/src/utils/authCookies.js"],
+      "priority": "high",
+      "status": "completed"
+    },
     {
       "date": "2026-05-21",
       "category": "Backend",
@@ -33,13 +42,11 @@
     }
   ],
   "recent": {
-    "date": "2026-05-21",
+    "date": "2026-05-22",
     "category": "Backend",
-    "title": "JWT token generation hardening",
-    "description": "Hardened JWT generation with fail-fast env validation, strict user-id and refresh-version checks, HS256 signing, and issuer claims for access and refresh tokens.",
-    "files": [
-      "server/src/utils/generateToken.js"
-    ],
+    "title": "Refresh cookie policy hardening",
+    "description": "Tightened refresh-token cookie settings to strict sameSite, high priority, and explicit clear-cookie options to reduce cross-site exposure and improve consistency during logout.",
+    "files": ["server/src/utils/authCookies.js"],
     "priority": "high",
     "status": "completed",
     "commit": null
