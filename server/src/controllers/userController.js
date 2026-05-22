@@ -7,6 +7,8 @@ import ForumPost from "../models/ForumPost.js";
 import { sendError, sendSuccess } from "../utils/response.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
+const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS) || 12;
+
 export const getProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id).select("-password");
 
@@ -62,7 +64,8 @@ export const updateProfile = asyncHandler(async (req, res) => {
   }
 
   if (typeof alias === "string") {
-    const nextAlias = alias.trim();
+    const nextAlias = alias.trim().toLowerCase();
+
 
     if (nextAlias) {
       const aliasOwner = await User.findOne({
@@ -109,7 +112,30 @@ export const changePassword = asyncHandler(async (req, res) => {
     return sendError(res, 400, "Incorrect current password");
   }
 
-  user.password = await bcrypt.hash(newPassword, 10);
+  const isSamePassword = await bcrypt.compare(
+    newPassword,
+    user.password
+  );
+
+  if (isSamePassword) {
+    return sendError(
+      res,
+      400,
+      "New password must be different from current password",
+      undefined,
+      "PASSWORD_UNCHANGED"
+    );
+  }
+
+  user.password = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  
+  // ─────────────────────────────────────────────
+  // SECURITY FIX
+  // Increment version to instantly kill all active sessions 
+  // globally upon password change.
+  // ─────────────────────────────────────────────
+  user.refreshTokenVersion = Number(user.refreshTokenVersion || 0) + 1;
+  
   await user.save();
 
   return sendSuccess(res, { changed: true }, 200, "Password updated");
@@ -123,13 +149,34 @@ export const deleteOwnAccount = asyncHandler(async (req, res) => {
     return sendError(res, 404, "User not found");
   }
 
-  await Promise.all([
+  // Use allSettled to ensure we capture all results without short-circuiting on the first failure
+  const cleanupResults = await Promise.allSettled([
     Report.deleteMany({ user: userId }),
     Article.deleteMany({ createdBy: userId }),
     ForumPost.deleteMany({ user: userId }),
     ForumPost.updateMany({}, { $pull: { replies: { user: userId } } }),
     User.findByIdAndDelete(userId)
   ]);
+
+  // Inspect for any partial failures
+  const failedOperations = cleanupResults.filter(
+    (result) => result.status === "rejected"
+  );
+
+  if (failedOperations.length > 0) {
+    console.error(
+      "[ACCOUNT_DELETION_PARTIAL_FAILURE]",
+      failedOperations.map((failure) => failure.reason?.message)
+    );
+
+    return sendError(
+      res,
+      500,
+      "Failed to fully delete account",
+      undefined,
+      "ACCOUNT_DELETION_FAILED"
+    );
+  }
 
   return sendSuccess(res, { deleted: true }, 200, "Account deleted");
 });
