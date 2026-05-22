@@ -9,6 +9,7 @@ import { incrementMetric, METRIC_KEYS } from "../utils/metrics.js";
 import { REPORT_STATUS_VALUES } from "../constants/reportTaxonomy.js";
 import { filterAndSortReports, getListPagination, paginateReports } from "../utils/reportList.js";
 import { deleteUploadedFile, persistUploadedFile, validateFile } from "../middlewares/uploadMiddleware.js";
+import asyncHandler from "../utils/asyncHandler.js";
 
 const PUBLIC_PAGE_LIMIT_MAX = 20;
 const PRIVATE_PAGE_LIMIT_MAX = 50;
@@ -35,11 +36,13 @@ const serializePublicReport = (report) => {
 };
 
 // Create Report
-export const createReport = async (req, res) => {
+export const createReport = asyncHandler(async (req, res) => {
+  let evidenceFilename = null;
+
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return sendError(res, 400, "Validation failed", errors.array());
+      return sendError(res, 400, "Validation failed", errors.array(), "VALIDATION_FAILED");
     }
 
     const {
@@ -58,7 +61,6 @@ export const createReport = async (req, res) => {
     const safeDescription = sensitiveFlag ? encrypt(description) : description;
 
     let evidencePath = null;
-    let evidenceFilename = null;
 
     if (req.file) {
       await validateFile(req.file);
@@ -68,7 +70,7 @@ export const createReport = async (req, res) => {
     }
 
     const report = await Report.create({
-      user: anonymousFlag ? null : req.user._id,
+      user: anonymousFlag ? null : req.user?._id,
       title,
       description: safeDescription,
       category,
@@ -87,139 +89,138 @@ export const createReport = async (req, res) => {
       report.user = null;
     }
 
-    await Notification.create({
-      message: "New report submitted",
-      type: "REPORT"
-    });
+    const sideEffectResults = await Promise.allSettled([
+      Notification.create({
+        message: "New report submitted",
+        type: "REPORT"
+      }),
+      req.user?._id ? addXP(req.user._id, "REPORT_CREATED") : Promise.resolve(),
+      req.user?._id ? addCoins(req.user._id, "REPORT_CREATED") : Promise.resolve(),
+      incrementMetric(METRIC_KEYS.REPORTS_SUBMITTED)
+    ]);
 
-    await addXP(req.user._id, "REPORT_CREATED");
-    await addCoins(req.user._id, "REPORT_CREATED");
-    await incrementMetric(METRIC_KEYS.REPORTS_SUBMITTED);
+    sideEffectResults.forEach((result) => {
+      if (result.status === "rejected") {
+        console.error(
+          "[REPORT_SIDE_EFFECT_ERROR]",
+          result.reason?.message || result.reason
+        );
+      }
+    });
 
     return sendSuccess(res, report, 201);
   } catch (error) {
     if (typeof evidenceFilename === "string" && evidenceFilename) {
-      await deleteUploadedFile(evidenceFilename);
+      await deleteUploadedFile(evidenceFilename).catch((cleanupError) => {
+        console.error("[FILE_CLEANUP_ERROR]", cleanupError.message);
+      });
     }
 
-    return sendError(res, 500, error.message);
+    throw error;
   }
-};
+});
 
 // Get public report feed (safe, non-sensitive projection)
-export const getReports = async (req, res) => {
-  try {
-    const { page, limit } = getListPagination(req.query, PUBLIC_PAGE_LIMIT_MAX);
-    const reports = await Report.find()
-      .select("title description category subcategory severity sourceChannel status isAnonymous isSensitive createdAt updatedAt")
-      .sort({ createdAt: -1 });
+export const getReports = asyncHandler(async (req, res) => {
+  const { page, limit } = getListPagination(req.query, PUBLIC_PAGE_LIMIT_MAX);
+  const reports = await Report.find()
+    .select("title description category subcategory severity sourceChannel status isAnonymous isSensitive createdAt updatedAt")
+    .sort({ createdAt: -1 });
 
-    const filteredReports = filterAndSortReports(reports, req.query);
-    const { items, pagination } = paginateReports(filteredReports, page, limit);
-    const safeReports = items.map((report) => serializePublicReport(report));
+  const filteredReports = filterAndSortReports(reports, req.query);
+  const { items, pagination } = paginateReports(filteredReports, page, limit);
+  const safeReports = items.map((report) => serializePublicReport(report));
 
-    return sendSuccess(res, {
-      items: safeReports,
-      pagination
-    });
-  } catch (error) {
-  console.error(
-    "[REPORT FETCH ERROR]",
-    error
-  );
-
-  console.error(error.stack);
-
-  return sendError(
-    res,
-    500,
-    error.message
-  );
-}
-};
+  return sendSuccess(res, {
+    items: safeReports,
+    pagination
+  });
+});
 
 // Get current user's own reports (detailed view)
-export const getMyReports = async (req, res) => {
-  try {
-    const { page, limit } = getListPagination(req.query, PRIVATE_PAGE_LIMIT_MAX);
-    const match = { user: req.user._id };
+export const getMyReports = asyncHandler(async (req, res) => {
+  const { page, limit } = getListPagination(req.query, PRIVATE_PAGE_LIMIT_MAX);
+  const match = { user: req.user._id };
 
-    const reports = await Report.find(match)
-      .select("title description category subcategory severity sourceChannel status contactEmail evidence isAnonymous isSensitive history createdAt updatedAt")
-      .sort({ createdAt: -1 });
+  const reports = await Report.find(match)
+    .select("title description category subcategory severity sourceChannel status contactEmail evidence isAnonymous isSensitive history createdAt updatedAt")
+    .sort({ createdAt: -1 });
 
-    const filteredReports = filterAndSortReports(reports, req.query);
-    const { items, pagination } = paginateReports(filteredReports, page, limit);
+  const filteredReports = filterAndSortReports(reports, req.query);
+  const { items, pagination } = paginateReports(filteredReports, page, limit);
 
-    const safeReports = items.map((report) => {
-      const item = report.toObject();
-      if (item.isSensitive) {
-        const { data, usedLegacy } = decrypt(item.description, {
-          source: "reportController.getMyReports",
-          recordId: String(report._id)
-        });
+  const safeReports = items.map((report) => {
+    const item = report.toObject();
+    if (item.isSensitive) {
+      const { data, usedLegacy } = decrypt(item.description, {
+        source: "reportController.getMyReports",
+        recordId: String(report._id)
+      });
 
-        item.description = data;
+      item.description = data;
 
-        if (usedLegacy) {
-          const reEncrypted = encrypt(data);
+      if (usedLegacy) {
+        const reEncrypted = encrypt(data);
 
-          if (report.description !== reEncrypted) {
-            report.description = reEncrypted;
-            report.save().catch((error) => {
-              console.error(`[ENCRYPTION] Lazy migration failed for report=${report._id}:`, error.message);
-            });
-          }
+        if (report.description !== reEncrypted) {
+          report.description = reEncrypted;
+          report.save().catch((error) => {
+            console.error(`[ENCRYPTION] Lazy migration failed for report=${report._id}:`, error.message);
+          });
         }
       }
-      return item;
-    });
+    }
+    return item;
+  });
 
-    return sendSuccess(res, {
-      items: safeReports,
-      pagination
-    });
-  } catch (error) {
-    return sendError(res, 500, error.message);
-  }
-};
+  return sendSuccess(res, {
+    items: safeReports,
+    pagination
+  });
+});
 
 // Update Status (Admin only)
-export const updateReportStatus = async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return sendError(res, 400, "Validation failed", errors.array());
-    }
+export const updateReportStatus = asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return sendError(res, 400, "Validation failed", errors.array(), "VALIDATION_FAILED");
+  }
 
-    const { status: newStatus } = req.body;
+  const { status: newStatus } = req.body;
 
-    if (!REPORT_STATUS_VALUES.includes(newStatus)) {
-      return sendError(res, 400, "Invalid status");
-    }
+  if (!REPORT_STATUS_VALUES.includes(newStatus)) {
+    return sendError(res, 400, "Invalid status", undefined, "INVALID_REPORT_STATUS");
+  }
 
-    const report = await Report.findById(req.params.id);
+  const report = await Report.findById(req.params.id);
 
-    if (!report) {
-      return sendError(res, 404, "Report not found");
-    }
+  if (!report) {
+    return sendError(res, 404, "Report not found", undefined, "REPORT_NOT_FOUND");
+  }
 
-    report.status = newStatus;
-    report.history.push({
-      status: newStatus,
-      date: new Date()
-    });
-    await report.save();
+  report.status = newStatus;
+  report.history.push({
+    status: newStatus,
+    date: new Date()
+  });
+  await report.save();
 
-    await Notification.create({
+  const sideEffectResults = await Promise.allSettled([
+    Notification.create({
       message: `Report marked as ${newStatus}`,
       type: "REPORT"
-    });
+    }),
+    incrementMetric(METRIC_KEYS.MODERATION_ACTIONS)
+  ]);
 
-    await incrementMetric(METRIC_KEYS.MODERATION_ACTIONS);
+  sideEffectResults.forEach((result) => {
+    if (result.status === "rejected") {
+      console.error(
+        "[REPORT_SIDE_EFFECT_ERROR]",
+        result.reason?.message || result.reason
+      );
+    }
+  });
 
-    return sendSuccess(res, report);
-  } catch (error) {
-    return sendError(res, 500, error.message);
-  }
-};
+  return sendSuccess(res, report);
+});

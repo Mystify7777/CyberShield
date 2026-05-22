@@ -7,6 +7,15 @@
     {
       "date": "2026-05-22",
       "category": "Bugfix",
+      "title": "Report side-effect observability",
+      "description": "Replaced generic catch logging in report creation and status updates with per-result Promise.allSettled logging so each rejected side effect is identified by its own failure reason.",
+      "files": ["server/src/controllers/reportController.js"],
+      "priority": "medium",
+      "status": "completed"
+    },
+    {
+      "date": "2026-05-22",
+      "category": "Bugfix",
       "title": "Server test compatibility fixes",
       "description": "Fixed auth route test startup by moving JWT secret validation out of module load, added a fallback for mocked refresh-token rotation paths, and adjusted TrustScan validation and bad-id error handling so the route tests match the intended responses.",
       "files": ["server/src/utils/generateToken.js", "server/src/controllers/authController.js", "server/src/controllers/trustScanController.js"],
@@ -71,9 +80,9 @@
   "recent": {
     "date": "2026-05-22",
     "category": "Bugfix",
-    "title": "Server test compatibility fixes",
-    "description": "Fixed auth route test startup by moving JWT secret validation out of module load, added a fallback for mocked refresh-token rotation paths, and adjusted TrustScan validation and bad-id error handling so the route tests match the intended responses.",
-    "files": ["server/src/utils/generateToken.js", "server/src/controllers/authController.js", "server/src/controllers/trustScanController.js"],
+    "title": "Report side-effect observability",
+    "description": "Replaced generic catch logging in report creation and status updates with per-result Promise.allSettled logging so each rejected side effect is identified by its own failure reason.",
+    "files": ["server/src/controllers/reportController.js"],
     "priority": "medium",
     "status": "completed",
     "commit": null

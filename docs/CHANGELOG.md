@@ -71,6 +71,10 @@ Legacy and overlapping logs were archived to docs/archive.
 - **Return semantics**: Replaced remaining `new: true` options with `returnDocument: "after"` in the reward and progression helpers and the refresh/session update path.
 - **Token normalization**: Updated JWT helper validation so valid Mongo ObjectId values are accepted after presence checks, while undefined/null/empty-like values still fail fast.
 
+### 📡 Report Side-Effect Observability
+- **Problem**: The report create/status side-effect blocks were only logging a single generic catch message, which hid which async side effect actually failed.
+- **Fix**: Switched both report endpoints to inspect each `Promise.allSettled(...)` result and log the specific rejected reason, restoring per-side-effect observability.
+
 ### 🍪 Refresh Cookie Policy
 - **Cookie scope**: Tightened refresh-token cookies to `sameSite: "strict"` and `priority: "high"` in `server/src/utils/authCookies.js`.
 - **Logout consistency**: Updated cookie clearing to use explicit options so logout clears the refresh cookie with the same hardened scope.
