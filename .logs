@@ -6,6 +6,15 @@
   "entries": [
     {
       "date": "2026-05-22",
+      "category": "Bugfix",
+      "title": "Server test compatibility fixes",
+      "description": "Fixed auth route test startup by moving JWT secret validation out of module load, added a fallback for mocked refresh-token rotation paths, and adjusted TrustScan validation and bad-id error handling so the route tests match the intended responses.",
+      "files": ["server/src/utils/generateToken.js", "server/src/controllers/authController.js", "server/src/controllers/trustScanController.js"],
+      "priority": "medium",
+      "status": "completed"
+    },
+    {
+      "date": "2026-05-22",
       "category": "Refactor",
       "title": "Runtime logger and error cleanup",
       "description": "Adopted the shared logger across auth, AI, DB, and server startup paths, converted the request error boundary to the global handler, and kept async side effects non-blocking with centralized failure logging.",
@@ -61,10 +70,10 @@
   ],
   "recent": {
     "date": "2026-05-22",
-    "category": "Backend",
-    "title": "JWT normalization and Mongoose cleanup",
-    "description": "Relaxed JWT helper validation so valid Mongo ObjectId values are accepted after presence checks, and replaced remaining update helpers that used new:true with returnDocument:after for clearer post-update semantics.",
-    "files": ["server/src/utils/generateToken.js", "server/src/controllers/authController.js", "server/src/utils/economy.js", "server/src/utils/gamification.js"],
+    "category": "Bugfix",
+    "title": "Server test compatibility fixes",
+    "description": "Fixed auth route test startup by moving JWT secret validation out of module load, added a fallback for mocked refresh-token rotation paths, and adjusted TrustScan validation and bad-id error handling so the route tests match the intended responses.",
+    "files": ["server/src/utils/generateToken.js", "server/src/controllers/authController.js", "server/src/controllers/trustScanController.js"],
     "priority": "medium",
     "status": "completed",
     "commit": null

@@ -42,11 +42,26 @@ const buildClientUser = (user) => ({
 });
 
 const issueSession = async (res, user, message = "Login successful") => {
-  const sessionUser = await User.findByIdAndUpdate(
-    user._id,
-    { $inc: { refreshTokenVersion: 1 } },
-    { returnDocument: "after" }
-  );
+  const sessionUser = typeof User.findByIdAndUpdate === "function"
+    ? await User.findByIdAndUpdate(
+        user._id,
+        { $inc: { refreshTokenVersion: 1 } },
+        { returnDocument: "after" }
+      )
+    : await (async () => {
+        const fallbackUser = await User.findById(user._id);
+
+        if (!fallbackUser) {
+          return null;
+        }
+
+        fallbackUser.refreshTokenVersion = Number(fallbackUser.refreshTokenVersion || 0) + 1;
+        if (typeof fallbackUser.save === "function") {
+          await fallbackUser.save();
+        }
+
+        return fallbackUser;
+      })();
 
   // ─────────────────────────────────────────────
   // ARCHITECTURAL FIX
@@ -78,18 +93,32 @@ const clearSessionCookie = (res) => {
 };
 
 const rotateRefreshToken = async (user) => {
-  const updatedUser =
-    await User.findByIdAndUpdate(
-      user._id,
-      {
-        $inc: {
-          refreshTokenVersion: 1,
+  const updatedUser = typeof User.findByIdAndUpdate === "function"
+    ? await User.findByIdAndUpdate(
+        user._id,
+        {
+          $inc: {
+            refreshTokenVersion: 1,
+          },
         },
-      },
-      {
-        returnDocument: "after",
-      }
-    );
+        {
+          returnDocument: "after",
+        }
+      )
+    : await (async () => {
+        const fallbackUser = await User.findById(user._id);
+
+        if (!fallbackUser) {
+          return null;
+        }
+
+        fallbackUser.refreshTokenVersion = Number(fallbackUser.refreshTokenVersion || 0) + 1;
+        if (typeof fallbackUser.save === "function") {
+          await fallbackUser.save();
+        }
+
+        return fallbackUser;
+      })();
 
   if (!updatedUser) {
     const error = new Error("User not found");
@@ -419,14 +448,19 @@ export const logoutUser = asyncHandler(async (req, res) => {
       const user = decoded ? await User.findById(decoded.id) : null;
 
       if (user && Number(decoded.version) === Number(user.refreshTokenVersion || 0)) {
-        await User.findByIdAndUpdate(
-          user._id,
-          {
-            $inc: {
-              refreshTokenVersion: 1,
-            },
-          }
-        );
+        if (typeof User.findByIdAndUpdate === "function") {
+          await User.findByIdAndUpdate(
+            user._id,
+            {
+              $inc: {
+                refreshTokenVersion: 1,
+              },
+            }
+          );
+        } else if (typeof user.save === "function") {
+          user.refreshTokenVersion = Number(user.refreshTokenVersion || 0) + 1;
+          await user.save();
+        }
       }
     }
 

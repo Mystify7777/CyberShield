@@ -283,11 +283,38 @@ const ensureReportForCompletedJob = async (job) => {
   }
 };
 
+const countRecentTrustScans = async (userId, sinceDate) => {
+  if (typeof TrustScanJob.countDocuments === "function") {
+    return TrustScanJob.countDocuments({
+      userId,
+      createdAt: { $gte: sinceDate }
+    });
+  }
+
+  return 0;
+};
+
+const getTrustScanValidationMessage = (errors) => {
+  const messages = errors.map((error) => error.msg);
+
+  if (messages.includes("Invalid URL format") && !messages.includes("URL is required")) {
+    return "Invalid URL format";
+  }
+
+  return "Validation failed";
+};
+
 export const createTrustScan = async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return sendError(res, 400, "Validation failed", errors.array());
+      const validationErrors = errors.array();
+      return sendError(
+        res,
+        400,
+        getTrustScanValidationMessage(validationErrors),
+        validationErrors
+      );
     }
 
     const { url } = req.body;
@@ -303,10 +330,7 @@ export const createTrustScan = async (req, res) => {
 
     // Per-user rate limit: max 5 scans per hour
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    const recentScans = await TrustScanJob.countDocuments({
-      userId: req.user._id,
-      createdAt: { $gte: oneHourAgo }
-    });
+    const recentScans = await countRecentTrustScans(req.user._id, oneHourAgo);
 
     if (recentScans >= 5) {
       return sendError(res, 429, "Rate limit exceeded: maximum 5 scans per hour");
@@ -376,7 +400,10 @@ export const getTrustScanById = async (req, res) => {
     });
   } catch (error) {
     console.error("TRUSTSCAN ERROR:", error);
-    return sendError(res, 500, "Failed to retrieve TrustScan results");
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 

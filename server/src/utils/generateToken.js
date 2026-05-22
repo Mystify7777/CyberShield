@@ -1,18 +1,17 @@
 import jwt from "jsonwebtoken";
 
-// ─────────────────────────────────────────────
-// FAIL FAST
-// ─────────────────────────────────────────────
-if (!process.env.JWT_SECRET) {
-  throw new Error("JWT_SECRET missing");
-}
-
-if (!process.env.JWT_REFRESH_SECRET) {
-  throw new Error("JWT_REFRESH_SECRET missing");
-}
-
 const getAccessTokenExpiresIn = () => process.env.JWT_EXPIRES_IN || "15m";
 const getRefreshTokenExpiresIn = () => process.env.JWT_REFRESH_EXPIRES_IN || "7d";
+
+const assertJwtSecrets = () => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET missing");
+  }
+
+  if (!process.env.JWT_REFRESH_SECRET) {
+    throw new Error("JWT_REFRESH_SECRET missing");
+  }
+};
 
 // ─────────────────────────────────────────────
 // INPUT VALIDATION
@@ -45,6 +44,8 @@ const assertValidUserId = (id) => {
 // GENERATORS
 // ─────────────────────────────────────────────
 export const generateToken = (id, expiresIn = getAccessTokenExpiresIn()) => {
+  assertJwtSecrets();
+
   // Validate raw input BEFORE coercion
   assertValidUserId(id);
 
@@ -69,6 +70,8 @@ export const generateRefreshToken = (
   refreshTokenVersion,
   expiresIn = getRefreshTokenExpiresIn()
 ) => {
+  assertJwtSecrets();
+
   // Validate raw input BEFORE coercion
   assertValidUserId(id);
 
