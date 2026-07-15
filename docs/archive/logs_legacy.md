@@ -279,7 +279,7 @@ This log is grouped by phase to make the timeline easier to scan:
 
 - Fixed unverified-user re-registration trap by deleting prior unverified account before new registration
 
-- Added optional mock email mode (`EMAIL_MOCK=true`) for local development without SMTP
+- Added optional mock email mode (`EMAIL_MOCK=true`) for local development without transactional email setup
 
 - Replaced Express 5-incompatible sanitization middleware with custom safe middlewares
 

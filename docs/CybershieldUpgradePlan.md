@@ -29,8 +29,7 @@
 - [ ] **`systemRoutes.js`** — Add rate limiting to `POST /client-errors`. It is an open unauthenticated write endpoint with no protection against abuse.
 - [ ] **`aiRoutes.js` + `uploadMiddleware.js` + `authRoutes.js`** — Extract `parsePositiveNumber` into a shared `src/utils/parseEnv.js`. Currently duplicated in at least 3 files.
 - [ ] **`trustScanRoutes.js`** — Add per-user scan rate limit. Each scan calls external APIs (DNS, TLS, Google Safe Browsing). Unlimited scans can exhaust external API quotas.
-- [ ] **`sendEmail.js`** — Create the nodemailer transporter once at module load, not inside every `sendEmail()` call.
-- [ ] **`sendEmail.js`** — Use `maskEmail()` from `logger.js` when logging the recipient address.
+- [x] **`sendEmail.js`** — Migrated from Nodemailer/Gmail SMTP to Brevo transactional email; keep `maskEmail()` in logs for any recipient logging.
 - [ ] **`gamification.js`** — Fix badge XP threshold ordering: "Meme Starter" requires 50 XP but "Rookie" requires 100 XP. A starter badge should have a lower bar than a rookie badge.
 - [ ] **`gamification.js`** — Make badge rules data-driven (array of `{ name, condition }` objects) instead of individual `if` blocks. Easier to extend and test.
 - [ ] **`authMiddleware.js`** — Log JWT error type internally (e.g. `TokenExpiredError` vs `JsonWebTokenError`) for observability, even though the client always receives a generic 401.
@@ -67,7 +66,7 @@
 - [ ] Add MongoDB indexes at minimum on: `userId`, `createdAt`, `status` across report, scan, and notification collections.
 
 ### Email
-- [ ] Replace Gmail + nodemailer with Resend, SendGrid, or Postmark for reliable transactional email delivery.
+- [x] Replace Gmail + nodemailer with Brevo transactional email for reliable OTP and reset delivery.
 - [ ] Add retry logic / email queue for delivery failures.
 
 ### Auth
