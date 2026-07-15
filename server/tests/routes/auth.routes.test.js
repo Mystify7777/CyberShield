@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   userFindOne: vi.fn(),
   userFindById: vi.fn(),
+  userFindByIdAndUpdate: vi.fn(),
   userCreate: vi.fn(),
   bcryptHash: vi.fn(),
   bcryptCompare: vi.fn(),
@@ -18,6 +19,7 @@ vi.mock("../../src/models/User.js", () => ({
   default: {
     findOne: mocks.userFindOne,
     findById: mocks.userFindById,
+    findByIdAndUpdate: mocks.userFindByIdAndUpdate,
     create: mocks.userCreate
   }
 }));
@@ -109,6 +111,8 @@ describe("Auth Routes", () => {
 
   it("logs in a verified user and returns a token", async () => {
     const save = vi.fn().mockResolvedValue(undefined);
+    // issueSession() calls User.findByIdAndUpdate to $inc refreshTokenVersion,
+    // NOT User.findById -- mock the call the controller actually makes.
     const sessionUser = {
       _id: "user_2",
       name: "Sam",
@@ -124,7 +128,7 @@ describe("Auth Routes", () => {
       badges: [],
       alias: "",
       bio: "",
-      refreshTokenVersion: 0,
+      refreshTokenVersion: 1, // reflects the post-$inc value returnDocument:"after" would give
       lastActive: null,
       save
     };
@@ -140,7 +144,7 @@ describe("Auth Routes", () => {
       save
     });
 
-    mocks.userFindById.mockResolvedValue(sessionUser);
+    mocks.userFindByIdAndUpdate.mockResolvedValue(sessionUser);
 
     const res = await request(app)
       .post("/api/auth/login")
@@ -165,9 +169,12 @@ describe("Auth Routes", () => {
     expect(mocks.addXP).toHaveBeenCalledTimes(1);
     expect(mocks.addCoins).toHaveBeenCalledTimes(1);
     expect(save).toHaveBeenCalledTimes(2);
+    expect(mocks.userFindByIdAndUpdate).toHaveBeenCalledTimes(1);
   });
 
   it("rotates the refresh cookie and returns a new access token", async () => {
+    // A single mutable "row" so refreshTokenVersion increments realistically
+    // across issueSession() (login) and rotateRefreshToken() (refresh).
     const sessionUser = {
       _id: "user_3",
       name: "Rita",
@@ -184,10 +191,31 @@ describe("Auth Routes", () => {
       alias: "",
       bio: "",
       refreshTokenVersion: 0,
+      lastActive: new Date(),
       save: vi.fn().mockResolvedValue(undefined)
     };
 
-    mocks.userFindById.mockResolvedValue(sessionUser);
+    mocks.userFindOne.mockResolvedValue({
+      _id: "user_3",
+      email: "rita@example.com",
+      password: "hashed-password",
+      isVerified: true,
+      isSuspended: false,
+      lastActive: new Date(),
+      streak: 0,
+      save: vi.fn().mockResolvedValue(undefined)
+    });
+
+    // Every findByIdAndUpdate call ($inc refreshTokenVersion) bumps the shared
+    // sessionUser and returns it, mirroring returnDocument:"after".
+    mocks.userFindByIdAndUpdate.mockImplementation(async () => {
+      sessionUser.refreshTokenVersion += 1;
+      return sessionUser;
+    });
+
+    // refreshSession() looks the user up via findById(decoded.id) to validate
+    // the token version before rotating it.
+    mocks.userFindById.mockImplementation(async () => sessionUser);
 
     const loginResponse = await request(app)
       .post("/api/auth/login")
@@ -230,10 +258,29 @@ describe("Auth Routes", () => {
       alias: "",
       bio: "",
       refreshTokenVersion: 0,
+      lastActive: new Date(),
       save: vi.fn().mockResolvedValue(undefined)
     };
 
-    mocks.userFindById.mockResolvedValue(sessionUser);
+    mocks.userFindOne.mockResolvedValue({
+      _id: "user_4",
+      email: "lee@example.com",
+      password: "hashed-password",
+      isVerified: true,
+      isSuspended: false,
+      lastActive: new Date(),
+      streak: 0,
+      save: vi.fn().mockResolvedValue(undefined)
+    });
+
+    mocks.userFindByIdAndUpdate.mockImplementation(async () => {
+      sessionUser.refreshTokenVersion += 1;
+      return sessionUser;
+    });
+
+    // logoutUser() looks the user up via findById(decoded.id) before
+    // deciding whether to bump the version again.
+    mocks.userFindById.mockImplementation(async () => sessionUser);
 
     const loginResponse = await request(app)
       .post("/api/auth/login")
@@ -243,6 +290,7 @@ describe("Auth Routes", () => {
       });
 
     const refreshCookie = loginResponse.headers["set-cookie"]?.[0];
+    expect(refreshCookie).toContain("cybershield_refresh_token=");
 
     const logoutResponse = await request(app)
       .post("/api/auth/logout")

@@ -308,7 +308,7 @@ describe("TrustScan Routes", () => {
 
       expect(res.status).toBe(500);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toBe("Failed to retrieve TrustScan results");
+      expect(res.body.message).toBe("An internal server error occurred. Please try again later.");
     });
   });
 
