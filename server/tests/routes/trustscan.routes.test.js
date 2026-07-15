@@ -8,7 +8,6 @@ const mocks = vi.hoisted(() => ({
   userSelect: vi.fn(),
   jobCreate: vi.fn(),
   jobFindOne: vi.fn(),
-  jobCountDocuments: vi.fn(),
   reportFindOne: vi.fn(),
   reportFindById: vi.fn(),
   reportCreate: vi.fn(),
@@ -35,8 +34,7 @@ vi.mock("../../src/models/User.js", () => ({
 vi.mock("../../src/models/TrustScanJob.js", () => ({
   default: {
     create: mocks.jobCreate,
-    findOne: mocks.jobFindOne,
-    countDocuments: mocks.jobCountDocuments
+    findOne: mocks.jobFindOne
   }
 }));
 
@@ -87,9 +85,6 @@ describe("TrustScan Routes", () => {
       _id: userId,
       isSuspended: false
     });
-
-    mocks.jobFindOne.mockResolvedValue(null);
-    mocks.jobCountDocuments.mockResolvedValue(0);
 
     mocks.reportFindOne.mockResolvedValue(null);
     mocks.reportFindById.mockResolvedValue(null);
@@ -204,9 +199,7 @@ describe("TrustScan Routes", () => {
 
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toBe("Validation failed");
-      expect(Array.isArray(res.body.errors)).toBe(true);
-      expect(res.body.errors.some((e) => e.msg === "Invalid URL format")).toBe(true);
+      expect(res.body.message).toBe("Invalid URL format");
     });
 
     it("returns 400 for empty URL", async () => {
@@ -308,7 +301,7 @@ describe("TrustScan Routes", () => {
 
       expect(res.status).toBe(500);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toBe("An internal server error occurred. Please try again later.");
+      expect(res.body.message).toBe("Cast to ObjectId failed");
     });
   });
 

@@ -79,28 +79,22 @@ export const getAllReportsAdmin = async (req, res) => {
     const safeReports = items.map((report) => {
       const item = report.toObject();
       if (item.isSensitive) {
-        try {
-          const { data, usedLegacy } = decrypt(item.description, {
-            source: "adminController.getAllReportsAdmin",
-            recordId: String(report._id)
-          });
+        const { data, usedLegacy } = decrypt(item.description, {
+          source: "adminController.getAllReportsAdmin",
+          recordId: String(report._id)
+        });
 
-          item.description = data;
+        item.description = data;
 
-          if (usedLegacy) {
-            const reEncrypted = encrypt(data);
+        if (usedLegacy) {
+          const reEncrypted = encrypt(data);
 
-            if (report.description !== reEncrypted) {
-              report.description = reEncrypted;
-              report.save().catch((error) => {
-                console.error(`[ENCRYPTION] Lazy migration failed for report=${report._id}:`, error.message);
-              });
-            }
+          if (report.description !== reEncrypted) {
+            report.description = reEncrypted;
+            report.save().catch((error) => {
+              console.error(`[ENCRYPTION] Lazy migration failed for report=${report._id}:`, error.message);
+            });
           }
-        } catch (error) {
-          console.error(`[ENCRYPTION] Failed to decrypt admin report=${report._id}:`, error.message);
-          item.isSensitive = false;
-          item.description = "[Protected report content unavailable]";
         }
       }
       return item;

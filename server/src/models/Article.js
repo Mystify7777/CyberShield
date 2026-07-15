@@ -13,8 +13,7 @@ const articleSchema = new mongoose.Schema(
     category: {
       type: String,
       enum: ["PHISHING", "SCAM", "PRIVACY", "GENERAL"],
-      default: "GENERAL",
-      index: true
+      default: "GENERAL"
     },
     tags: [
       {
@@ -24,14 +23,12 @@ const articleSchema = new mongoose.Schema(
     ],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      index: true
+      ref: "User"
     },
     status: {
       type: String,
       enum: ["PENDING", "APPROVED", "REJECTED"],
-      default: "PENDING",
-      index: true
+      default: "PENDING"
     },
     upvotes: [
       {
@@ -48,9 +45,5 @@ const articleSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
-// Add compound indexes for common queries
-articleSchema.index({ status: 1, createdAt: -1 });
-articleSchema.index({ createdBy: 1, createdAt: -1 });
 
 export default mongoose.model("Article", articleSchema);

@@ -1,7 +1,8 @@
 import toast from "react-hot-toast";
 import API from "../../services/api";
 import { syncUserCoins } from "../../utils/economySync";
-import { getAssetUrl } from "../../utils/getAssetUrl";
+
+const API_HOST = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/+$/, "");
 
 export default function MemeCard({ meme, refresh }) {
   const user = JSON.parse(localStorage.getItem("user") || "null");
@@ -10,7 +11,7 @@ export default function MemeCard({ meme, refresh }) {
   const hasDownvoted = Boolean(userId && meme.downvotes?.some((id) => String(id) === String(userId)));
 
   const vote = async (type) => {
-    if (!user) {
+    if (!user?.token) {
       toast.error("Login required to vote");
       return;
     }
@@ -27,7 +28,7 @@ export default function MemeCard({ meme, refresh }) {
   return (
     <div className="card">
       <img
-        src={getAssetUrl(meme.image)}
+        src={`${API_HOST}${meme.image}`}
         alt={meme.caption || "Meme"}
         className="rounded-sm mb-3 w-full h-64 object-cover"
       />

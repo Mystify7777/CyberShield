@@ -2,11 +2,7 @@ import mongoose from "mongoose";
 
 const forumPostSchema = new mongoose.Schema(
   {
-    user: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: "User",
-      index: true
-    },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     title: String,
     content: String,
     replies: [
@@ -20,7 +16,6 @@ const forumPostSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-forumPostSchema.index({ createdAt: -1 });
-forumPostSchema.index({ user: 1, createdAt: -1 });
+forumPostSchema.index({ createdAt: 1 });
 
 export default mongoose.model("ForumPost", forumPostSchema);

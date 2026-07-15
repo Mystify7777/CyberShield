@@ -6,7 +6,6 @@ import { AlertCircle, Shield, Mail, Image as ImageIcon, EyeOff, TriangleAlert } 
 import Button from "../../components/ui/Button";
 import PageState from "../../components/ui/PageState";
 import ReportFiltersToolbar from "../../components/reports/ReportFiltersToolbar";
-import { getAssetUrl } from "../../utils/getAssetUrl";
 import {
   getCategoryLabel,
   getSourceChannelLabel,
@@ -16,6 +15,8 @@ import {
   REPORT_PUBLIC_STATUS_VALUES
 } from "../../constants/reportTaxonomy";
 import { useReportFilters } from "../../hooks/useReportFilters";
+
+const ASSET_HOST = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/+$/, "");
 
 export default function ViewReports() {
   const navigate = useNavigate();
@@ -35,7 +36,7 @@ export default function ViewReports() {
   const [error, setError] = useState("");
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0, hasNextPage: false });
   const user = JSON.parse(localStorage.getItem("user") || "null");
-  const isAuthenticated = Boolean(user);
+  const isAuthenticated = Boolean(localStorage.getItem("token"));
   const limit = 10;
 
   // Request lifecycle management: prevent stale responses from overwriting fresh results
@@ -285,13 +286,13 @@ export default function ViewReports() {
                   </p>
                   {r.evidence.match(/\.(jpg|jpeg|png|gif)$/i) ? (
                     <img
-                      src={getAssetUrl(r.evidence)}
+                      src={`${ASSET_HOST}${r.evidence}`}
                       alt="Evidence"
                       className="w-full max-w-md rounded-sm border"
                     />
                   ) : (
                     <a
-                      href={getAssetUrl(r.evidence)}
+                      href={`${ASSET_HOST}${r.evidence}`}
                       target="_blank"
                       rel="noreferrer"
                       className="text-blue-500 underline"

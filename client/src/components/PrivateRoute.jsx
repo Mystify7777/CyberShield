@@ -1,32 +1,59 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { bootstrapAuthSession } from "../utils/authBootstrap";
-import { getStoredUser, storeUserProfile, clearStoredUser } from "../services/authSession";
+import API from "../services/api";
+
+const SESSION_VALIDATION_TTL_MS = 60 * 1000;
+let lastValidationAt = 0;
+let activeValidationPromise = null;
+
+const validateSession = async () => {
+  const now = Date.now();
+
+  if (now - lastValidationAt < SESSION_VALIDATION_TTL_MS) {
+    return true;
+  }
+
+  if (!activeValidationPromise) {
+    activeValidationPromise = API.get("/auth/validate")
+      .then(() => {
+        lastValidationAt = Date.now();
+        return true;
+      })
+      .catch(() => false)
+      .finally(() => {
+        activeValidationPromise = null;
+      });
+  }
+
+  return activeValidationPromise;
+};
 
 export default function PrivateRoute({ children, adminOnly = false }) {
-  const user = getStoredUser();
+  const user = JSON.parse(localStorage.getItem("user") || "null");
   const [isChecking, setIsChecking] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(Boolean(user));
-  const [sessionUser, setSessionUser] = useState(user);
 
   useEffect(() => {
     let mounted = true;
 
     const runValidation = async () => {
-      const validatedUser = await bootstrapAuthSession();
+      if (!user?.token) {
+        if (mounted) {
+          setIsAuthenticated(false);
+          setIsChecking(false);
+        }
+        return;
+      }
+
+      const isValid = await validateSession();
 
       if (!mounted) return;
 
-      if (validatedUser) {
-        storeUserProfile(validatedUser);
-        setSessionUser(validatedUser);
-        setIsAuthenticated(true);
-      } else {
-        clearStoredUser();
-        setSessionUser(null);
-        setIsAuthenticated(false);
+      if (!isValid) {
+        localStorage.removeItem("user");
       }
 
+      setIsAuthenticated(isValid);
       setIsChecking(false);
     };
 
@@ -35,7 +62,7 @@ export default function PrivateRoute({ children, adminOnly = false }) {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [user?.token]);
 
   if (isChecking) {
     return <div className="p-4 text-sm text-gray-500">Validating session...</div>;
@@ -43,7 +70,7 @@ export default function PrivateRoute({ children, adminOnly = false }) {
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
-  if (adminOnly && !["ADMIN", "SUPER_ADMIN"].includes(sessionUser?.role)) {
+  if (adminOnly && !["ADMIN", "SUPER_ADMIN"].includes(user.role)) {
     return <Navigate to="/dashboard" replace />;
   }
 

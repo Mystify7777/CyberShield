@@ -23,9 +23,8 @@
 - OTP_HASH_SECRET=strong_random_secret_for_otp_hmac
 - ENCRYPTION_KEY=your_64_char_hex_key
 - ENCRYPTION_LEGACY_KEYS=comma_separated_old_keys
-- BREVO_API_KEY=your_brevo_api_key
-- BREVO_SENDER_NAME=CyberShield
-- BREVO_SENDER_EMAIL=verified_sender@yourdomain.com
+- EMAIL_USER=your_gmail_address
+- EMAIL_PASS=your_gmail_app_password
 - EMAIL_MOCK=false
 
 Encryption migration helper:

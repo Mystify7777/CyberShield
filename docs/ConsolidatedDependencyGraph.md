@@ -88,7 +88,7 @@ CyberShield Backend (src/)
 │       ├── metrics.js                 ✅ atomic $inc, needs try/catch wrapper
 │       ├── reportList.js              ⚠️ in-memory filter+sort, won't scale
 │       ├── response.js                ✅ consistent API response shape
-│       └── sendEmail.js              ✅ Brevo transactional email, keeps sendEmail() contract
+│       └── sendEmail.js              ⚠️ transporter per call, Gmail fragile, raw email in logs
 │
 ├── constants/
 │   └── reportTaxonomy.js             ✅ well-structured — ⚠️ normalize functions pass through unknown values, ESCALATED rank wrong

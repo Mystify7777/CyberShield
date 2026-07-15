@@ -15,28 +15,20 @@ const videoSchema = new mongoose.Schema(
     category: {
       type: String,
       enum: ["AWARENESS", "SCAM", "TIPS"],
-      default: "AWARENESS",
-      index: true
+      default: "AWARENESS"
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
-      index: true
+      required: true
     },
     status: {
       type: String,
       enum: ["PENDING", "APPROVED", "REJECTED"],
-      default: "PENDING",
-      index: true
+      default: "PENDING"
     }
   },
   { timestamps: true }
 );
-
-// Add compound indexes for common queries
-videoSchema.index({ status: 1, createdAt: -1 });
-videoSchema.index({ createdBy: 1, createdAt: -1 });
-videoSchema.index({ category: 1, status: 1 });
 
 export default mongoose.model("Video", videoSchema);

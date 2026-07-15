@@ -106,15 +106,14 @@ EMAIL_MOCK=true
 
 Email notes:
 
-- Use `EMAIL_MOCK=true` for local development to avoid transactional email setup.
-- If you want real OTP/reset emails, configure `BREVO_API_KEY`, `BREVO_SENDER_NAME`, and `BREVO_SENDER_EMAIL`.
+- Use `EMAIL_MOCK=true` for local development to avoid SMTP setup.
+- If you want real OTP/reset emails, configure `EMAIL_USER` and `EMAIL_PASS` too.
 
-Optional Brevo config for real inbox delivery:
+Optional email config for real inbox delivery:
 
 ```env
-BREVO_API_KEY=your_brevo_api_key
-BREVO_SENDER_NAME=CyberShield
-BREVO_SENDER_EMAIL=verified_sender@yourdomain.com
+EMAIL_USER=your_gmail_address
+EMAIL_PASS=your_gmail_app_password
 ```
 
 ## 5) Start the full stack
@@ -224,8 +223,8 @@ Issue: DB error on server start
 
 Issue: OTP or reset-email errors while testing auth
 
-- Cause: transactional email not configured.
-- Fix: set `EMAIL_MOCK=true` in `server/.env` for local onboarding, or configure the Brevo variables above for real delivery.
+- Cause: SMTP not configured.
+- Fix: set `EMAIL_MOCK=true` in `server/.env` for local onboarding.
 
 Issue: Client cannot call backend
 

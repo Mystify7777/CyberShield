@@ -1,122 +1,21 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import jwt from "jsonwebtoken";
-import { generateToken, generateRefreshToken } from "../utils/generateToken.js";
-import asyncHandler from "../utils/asyncHandler.js";
+import { generateToken } from "../utils/generateToken.js";
 import { validationResult } from "express-validator";
 import { sendError, sendSuccess } from "../utils/response.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { addXP } from "../utils/gamification.js";
 import { addCoins } from "../utils/economy.js";
-import { clearRefreshTokenCookie, getRefreshTokenFromRequest, setRefreshTokenCookie } from "../utils/authCookies.js";
-import { logInfo, logWarn, maskEmail } from "../utils/logger.js";
+import { logError, logInfo, logWarn, maskEmail } from "../utils/logger.js";
 
 const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
-const getOtpHashSecret = () => {
-  const secret = process.env.OTP_HASH_SECRET;
+const OTP_HASH_SECRET = process.env.OTP_HASH_SECRET || process.env.JWT_SECRET || "otp-fallback-secret";
+const hashOtp = (otp) => crypto.createHmac("sha256", OTP_HASH_SECRET).update(String(otp)).digest("hex");
 
-  if (!secret) {
-    throw new Error("OTP_HASH_SECRET missing");
-  }
-
-  return secret;
-};
-const hashOtp = (otp) => crypto.createHmac("sha256", getOtpHashSecret()).update(String(otp)).digest("hex");
-
-const buildClientUser = (user) => ({
-  _id: user._id,
-  name: user.name,
-  email: user.email,
-  role: user.role,
-  isVerified: user.isVerified,
-  isSuspended: user.isSuspended,
-  xp: user.xp,
-  level: user.level,
-  streak: user.streak,
-  coins: user.coins,
-  dailyCoins: user.dailyCoins,
-  badges: user.badges,
-  alias: user.alias,
-  bio: user.bio
-});
-
-const issueSession = async (res, user, message = "Login successful") => {
-  const sessionUser = await User.findByIdAndUpdate(
-    user._id,
-    { $inc: { refreshTokenVersion: 1 } },
-    { returnDocument: "after" }
-  );
-
-  // ─────────────────────────────────────────────
-  // ARCHITECTURAL FIX
-  // Domain helper throws typed error instead of 
-  // directly manipulating the HTTP response.
-  // ─────────────────────────────────────────────
-  if (!sessionUser) {
-    const error = new Error("User not found");
-    error.type = "USER_NOT_FOUND";
-    error.status = 404;
-    throw error;
-  }
-
-  const accessToken = generateToken(sessionUser._id);
-  const refreshToken = generateRefreshToken(sessionUser._id, sessionUser.refreshTokenVersion);
-
-  // Note: To make this 100% pure later, we should move the cookie setting 
-  // and sendSuccess out of here and back into the controller block.
-  setRefreshTokenCookie(res, refreshToken);
-
-  return sendSuccess(res, {
-    user: buildClientUser(sessionUser),
-    accessToken
-  }, 200, message);
-};
-
-const clearSessionCookie = (res) => {
-  clearRefreshTokenCookie(res);
-};
-
-const rotateRefreshToken = async (user) => {
-  const updatedUser =
-    await User.findByIdAndUpdate(
-      user._id,
-      {
-        $inc: {
-          refreshTokenVersion: 1,
-        },
-      },
-      {
-        returnDocument: "after",
-      }
-    );
-
-  if (!updatedUser) {
-    const error = new Error("User not found");
-    error.type = "USER_NOT_FOUND";
-    error.status = 404;
-
-    throw error;
-  }
-
-  return generateRefreshToken(
-    updatedUser._id,
-    updatedUser.refreshTokenVersion
-  );
-};
-
-const verifyJwtToken = (token, secret) =>
-  new Promise((resolve) => {
-    jwt.verify(token, secret, (error, decoded) => {
-      if (error) {
-        return resolve({ error });
-      }
-
-      return resolve({ decoded });
-    });
-  });
 // Register
-export const registerUser = asyncHandler(async (req, res) => {
+export const registerUser = async (req, res) => {
+  try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return sendError(res, 400, "Validation failed", errors.array());
@@ -130,19 +29,12 @@ export const registerUser = asyncHandler(async (req, res) => {
       if (!existingUser.isVerified) {
         await existingUser.deleteOne();
       } else {
-        logWarn(
-          "AUTH_SECURITY",
-          "Duplicate registration attempt",
-          {
-            email: maskEmail(normalizedEmail),
-          }
-        );
         return sendError(res, 400, "User already exists");
       }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const otp = crypto.randomInt(100000, 1000000).toString();
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const hashedOtp = hashOtp(otp);
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
@@ -150,7 +42,7 @@ export const registerUser = asyncHandler(async (req, res) => {
       name,
       email: normalizedEmail,
       password: hashedPassword,
-      verificationOTPHash: hashedOtp,
+      verificationOTP: hashedOtp,
       otpExpires: otpExpiry,
       failedOtpAttempts: 0
     });
@@ -173,10 +65,15 @@ export const registerUser = asyncHandler(async (req, res) => {
       role: user.role,
       isVerified: user.isVerified
     }, 201);
-});
+  } catch (error) {
+    logError("AUTH", "registerUser error", error?.message || error);
+    return sendError(res, 500, error.message);
+  }
+};
 
 // Resend OTP
-export const resendOTP = asyncHandler(async (req, res) => {
+export const resendOTP = async (req, res) => {
+  try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return sendError(res, 400, "Validation failed", errors.array());
@@ -187,20 +84,15 @@ export const resendOTP = asyncHandler(async (req, res) => {
     const user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
-      return sendSuccess(
-        res,
-        { resent: true },
-        200,
-        "If the account exists, OTP has been sent"
-      );
+      return sendError(res, 404, "User not found");
     }
 
     if (user.isVerified) {
       return sendError(res, 400, "Account already verified");
     }
 
-    const otp = crypto.randomInt(100000, 1000000).toString();
-    user.verificationOTPHash = hashOtp(otp);
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.verificationOTP = hashOtp(otp);
     user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
     user.failedOtpAttempts = 0;
     await user.save();
@@ -212,16 +104,16 @@ export const resendOTP = asyncHandler(async (req, res) => {
       userId: String(user._id)
     });
 
-    return sendSuccess(
-      res,
-      { resent: true },
-      200,
-      "If the account exists, OTP has been sent"
-    );
-});
+    return sendSuccess(res, { resent: true }, 200, "OTP resent");
+  } catch (error) {
+    logError("AUTH", "resendOTP error", error?.message || error);
+    return sendError(res, 500, error.message);
+  }
+};
 
 // Verify OTP
-export const verifyOTP = asyncHandler(async (req, res) => {
+export const verifyOTP = async (req, res) => {
+  try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return sendError(res, 400, "Validation failed", errors.array());
@@ -234,11 +126,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     const submittedOtpHash = hashOtp(otp);
 
     if (!user) {
-      return sendError(
-        res,
-        400,
-        "Invalid or expired OTP"
-      );
+      return sendError(res, 404, "User not found");
     }
 
     if (user.failedOtpAttempts >= maxAttempts) {
@@ -250,7 +138,9 @@ export const verifyOTP = asyncHandler(async (req, res) => {
       );
     }
 
-    const isOtpValid = Boolean(user.verificationOTPHash) && user.verificationOTPHash === submittedOtpHash;
+    const isOtpValid = Boolean(user.verificationOTP) && (
+      user.verificationOTP === submittedOtpHash || user.verificationOTP === otp
+    );
     const isOtpExpired = !user.otpExpires || user.otpExpires < Date.now();
 
     if (!isOtpValid || isOtpExpired) {
@@ -278,7 +168,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     }
 
     user.isVerified = true;
-    user.verificationOTPHash = null;
+    user.verificationOTP = null;
     user.otpExpires = null;
     user.failedOtpAttempts = 0;
     await user.save();
@@ -289,10 +179,15 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     });
 
     return sendSuccess(res, { verified: true, attemptsRemaining: maxAttempts }, 200, "Account verified");
-});
+  } catch (error) {
+    logError("AUTH", "verifyOTP error", error?.message || error);
+    return sendError(res, 500, error.message);
+  }
+};
 
 // Login
-export const loginUser = asyncHandler(async (req, res) => {
+export const loginUser = async (req, res) => {
+  try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return sendError(res, 400, "Validation failed", errors.array());
@@ -309,13 +204,6 @@ export const loginUser = asyncHandler(async (req, res) => {
       }
 
       if (user.isSuspended) {
-          logWarn(
-            "AUTH_SECURITY",
-            "Suspended login attempt",
-            {
-              email: maskEmail(normalizedEmail),
-            }
-          );
         return sendError(res, 403, "Account suspended");
       }
 
@@ -346,96 +234,32 @@ export const loginUser = asyncHandler(async (req, res) => {
         await user.save();
       }
 
-      return issueSession(res, user, "Login successful");
+      const refreshedUser = await User.findById(user._id);
+
+      return sendSuccess(res, {
+        _id: refreshedUser._id,
+        name: refreshedUser.name,
+        email: refreshedUser.email,
+        role: refreshedUser.role,
+        xp: refreshedUser.xp,
+        level: refreshedUser.level,
+        streak: refreshedUser.streak,
+        coins: refreshedUser.coins,
+        dailyCoins: refreshedUser.dailyCoins,
+        badges: refreshedUser.badges,
+        token: generateToken(refreshedUser._id)
+      });
     } else {
-      logWarn(
-        "AUTH_SECURITY",
-        "Invalid login attempt",
-        {
-          email: maskEmail(normalizedEmail),
-        }
-      );
       return sendError(res, 401, "Invalid credentials");
     }
-});
-
-export const refreshSession = asyncHandler(async (req, res) => {
-    const refreshToken = getRefreshTokenFromRequest(req);
-    if (!refreshToken) {
-      return sendError(res, 401, "No refresh token provided");
-    }
-
-    const { error: tokenError, decoded } = await verifyJwtToken(refreshToken, process.env.JWT_REFRESH_SECRET);
-
-    if (tokenError) {
-      clearSessionCookie(res);
-
-      const authError = new Error("Not authorized");
-      authError.type = "AUTH_REQUIRED";
-      authError.status = 401;
-      throw authError;
-    }
-
-    const user = await User.findById(decoded.id);
-
-    if (!user) {
-      clearSessionCookie(res);
-      return sendError(res, 401, "Not authorized");
-    }
-
-    if (user.isSuspended) {
-      clearSessionCookie(res);
-      return sendError(res, 403, "Account suspended");
-    }
-
-    if (Number(decoded.version) !== Number(user.refreshTokenVersion || 0)) {
-      logWarn(
-        "AUTH_SECURITY",
-        "Refresh token version mismatch",
-        {
-          userId: String(user._id),
-        }
-      );
-      clearSessionCookie(res);
-      return sendError(res, 401, "Not authorized");
-    }
-
-    const nextRefreshToken = await rotateRefreshToken(user);
-    const accessToken = generateToken(user._id);
-
-    setRefreshTokenCookie(res, nextRefreshToken);
-
-    return sendSuccess(res, {
-      user: buildClientUser(user),
-      accessToken
-    }, 200, "Session refreshed");
-});
-
-export const logoutUser = asyncHandler(async (req, res) => {
-    const refreshToken = getRefreshTokenFromRequest(req);
-
-    if (refreshToken) {
-      const { decoded } = await verifyJwtToken(refreshToken, process.env.JWT_REFRESH_SECRET);
-      const user = decoded ? await User.findById(decoded.id) : null;
-
-      if (user && Number(decoded.version) === Number(user.refreshTokenVersion || 0)) {
-        await User.findByIdAndUpdate(
-          user._id,
-          {
-            $inc: {
-              refreshTokenVersion: 1,
-            },
-          }
-        );
-      }
-    }
-
-    clearSessionCookie(res);
-    return sendSuccess(res, { loggedOut: true }, 200, "Logged out");
-});
+  } catch (error) {
+    return sendError(res, 500, error.message);
+  }
+};
 
 // Forgot Password (request reset token)
-export const forgotPassword = asyncHandler(async (req, res) => {
+export const forgotPassword = async (req, res) => {
+  try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return sendError(res, 400, "Validation failed", errors.array());
@@ -447,23 +271,6 @@ export const forgotPassword = asyncHandler(async (req, res) => {
 
     // Avoid account enumeration by returning success either way
     if (!user) {
-      return sendSuccess(
-        res,
-        { requested: true },
-        200,
-        "If the account exists, a reset token has been sent"
-      );
-    }
-
-    if (user.isSuspended) {
-      logWarn(
-        "AUTH_SECURITY",
-        "Suspended user requested password reset",
-        {
-          email: maskEmail(normalizedEmail),
-        }
-      );
-
       return sendSuccess(
         res,
         { requested: true },
@@ -496,7 +303,11 @@ export const forgotPassword = asyncHandler(async (req, res) => {
       200,
       "If the account exists, a reset token has been sent"
     );
-});
+  } catch (error) {
+    logError("AUTH", "forgotPassword error", error?.message || error);
+    return sendError(res, 500, error.message);
+  }
+};
 
 // Reset Password (using token)
 /**
@@ -504,11 +315,19 @@ export const forgotPassword = asyncHandler(async (req, res) => {
  * Password reset must NOT modify moderation state (for example isSuspended).
  * Moderation flags are controlled only via admin flows.
  */
-export const resetPassword = asyncHandler(async (req, res) => {
+export const resetPassword = async (req, res) => {
+  try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return sendError(res, 400, "Validation failed", errors.array());
     }
+
+    // Defensive guard: auth flows should never accept moderation or role fields.
+    ["isSuspended", "role", "isVerified", "coins", "xp"].forEach((blockedField) => {
+      if (Object.prototype.hasOwnProperty.call(req.body, blockedField)) {
+        delete req.body[blockedField];
+      }
+    });
 
     const { email, token, newPassword } = req.body;
     const normalizedEmail = normalizeEmail(email);
@@ -523,7 +342,6 @@ export const resetPassword = asyncHandler(async (req, res) => {
       logWarn("AUTH_SECURITY", "Suspended user attempted password reset", {
         email: maskEmail(normalizedEmail)
       });
-      return sendError(res, 403, "Account access restricted");
     }
 
     if (
@@ -539,10 +357,6 @@ export const resetPassword = asyncHandler(async (req, res) => {
     user.passwordResetToken = null;
     user.passwordResetExpires = null;
     user.failedOtpAttempts = 0;
-    
-    // Instantly kill all active sessions and stolen refresh tokens globally.
-    user.refreshTokenVersion = Number(user.refreshTokenVersion || 0) + 1;
-
     await user.save();
 
     logInfo("AUTH", "Password reset successful", {
@@ -551,11 +365,22 @@ export const resetPassword = asyncHandler(async (req, res) => {
     });
 
     return sendSuccess(res, { reset: true }, 200, "Password reset successful");
-});
+  } catch (error) {
+    logError("AUTH", "resetPassword error", error?.message || error);
+    return sendError(res, 500, error.message);
+  }
+};
 
-export const validateToken = asyncHandler(async (req, res) => {
+export const validateToken = async (req, res) => {
   return sendSuccess(res, {
     valid: true,
-    user: buildClientUser(req.user)
+    user: {
+      _id: req.user._id,
+      name: req.user.name,
+      email: req.user.email,
+      role: req.user.role,
+      isVerified: req.user.isVerified,
+      isSuspended: req.user.isSuspended
+    }
   });
-});
+};

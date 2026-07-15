@@ -1,5 +1,4 @@
 import dotenv from "dotenv";
-import { logStatus } from "./utils/logger.js";
 
 dotenv.config();
 
@@ -11,5 +10,5 @@ const PORT = process.env.PORT || 5000;
 connectDB();
 
 app.listen(PORT, () => {
-	logStatus("SERVER", `Server running on port ${PORT}`);
+	console.log(`Server running on port ${PORT}`);
 });

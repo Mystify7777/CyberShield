@@ -1,6 +1,6 @@
 # CyberShield
 
-> Email delivery now uses Brevo transactional email for OTP, password reset, and notifications. Configure `BREVO_API_KEY`, `BREVO_SENDER_NAME`, and `BREVO_SENDER_EMAIL` in the server environment.
+> ⚠️⚠️ Due to some conflict between smtp and resend, the authorization isn't working for now as it requires an otp. I am trying to look for a workaround that doesn't requires me investing, I am broke..
 
 > You can use this credential to visit in user mode.
 > email : `aryan.k.dev.mystify@gmail.com`
@@ -133,10 +133,6 @@ AI_SERVICE_URL=http://localhost:8000
 ALLOWED_ORIGINS=http://localhost:5173
 GOOGLE_SAFE_BROWSING_API_KEY=your_google_safe_browsing_api_key
 DEBUG_REQUEST_LOGS=false
-BREVO_API_KEY=your_brevo_api_key
-BREVO_SENDER_NAME=CyberShield
-BREVO_SENDER_EMAIL=verified_sender@yourdomain.com
-EMAIL_MOCK=false
 ```
 
 ## License

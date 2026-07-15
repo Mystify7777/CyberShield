@@ -4,7 +4,7 @@ export const getApiBaseUrl = () => {
   const rawBase = import.meta.env.VITE_API_URL;
 
   if (!rawBase) {
-    return "/api";
+    return "http://localhost:5000/api";
   }
 
   const normalized = normalizeBase(rawBase);

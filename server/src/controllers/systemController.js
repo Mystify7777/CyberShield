@@ -98,11 +98,8 @@ export const logClientError = async (req, res) => {
 
 export const getClientErrors = async (req, res) => {
   try {
-    const rawPage = Number(req.query.page) || 1;
-    const rawLimit = Number(req.query.limit) || 20;
-    // Cap limit to prevent resource exhaustion
-    const page = Math.max(1, rawPage);
-    const limit = Math.min(Math.max(1, rawLimit), 100);
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 20;
     const source = req.query.source;
     const statusCode = req.query.statusCode;
     const q = req.query.q?.trim();
