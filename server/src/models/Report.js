@@ -71,7 +71,8 @@ const reportSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: [...REPORT_STATUS_VALUES, ...LEGACY_REPORT_STATUSES],
-      default: "SUBMITTED"
+      default: "SUBMITTED",
+      index: true
     },
     history: [
       {
@@ -85,5 +86,10 @@ const reportSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Add indexes for common queries
+reportSchema.index({ user: 1, createdAt: -1 });
+reportSchema.index({ status: 1, createdAt: -1 });
+reportSchema.index({ severity: 1, createdAt: -1 });
 
 export default mongoose.model("Report", reportSchema);

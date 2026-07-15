@@ -60,13 +60,13 @@ Fix: Removed dot-pruning normalization behavior and replaced it with trim + lowe
 
 ---
 
-## Operational Note: SMTP Credentials
+## Operational Note: Email Delivery
 
-Description: Gmail SMTP can reject credentials (`535 BadCredentials`) when not using App Password.
+Description: OTP and password reset mail now uses Brevo transactional email instead of Gmail SMTP.
 
 Status: Mitigated
 
-Fix: Added `EMAIL_MOCK` mode for local dev and documented App Password requirement.
+Fix: Added `EMAIL_MOCK` mode for local dev and documented `BREVO_API_KEY`, `BREVO_SENDER_NAME`, and `BREVO_SENDER_EMAIL`.
 
 ---
 

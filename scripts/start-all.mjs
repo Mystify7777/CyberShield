@@ -13,6 +13,25 @@ const isWindows = process.platform === "win32";
 
 const npmCommand = isWindows ? "npm.cmd" : "npm";
 
+const validateServerEnv = spawn(npmCommand, ["run", "predev"], {
+  cwd: serverDir,
+  stdio: "inherit",
+  shell: isWindows
+});
+
+const waitForValidation = new Promise((resolve, reject) => {
+  validateServerEnv.on("exit", (code, signal) => {
+    if (signal || code !== 0) {
+      reject(new Error(`Environment validation failed with ${signal || code}`));
+      return;
+    }
+
+    resolve();
+  });
+});
+
+await waitForValidation;
+
 const aiPythonCandidates = isWindows
   ? [
       path.join(aiDir, ".venv", "Scripts", "python.exe"),

@@ -107,7 +107,7 @@ const ensureUser = async (userInput, hashedPassword) => {
     password: hashedPassword,
     isVerified: true,
     isSuspended: false,
-    verificationOTP: null,
+    verificationOTPHash: null,
     otpExpires: null,
     failedOtpAttempts: 0
   });

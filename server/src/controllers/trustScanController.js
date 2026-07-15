@@ -301,6 +301,29 @@ export const createTrustScan = async (req, res) => {
       return sendError(res, 400, "Invalid URL format");
     }
 
+    // Per-user rate limit: max 5 scans per hour
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const recentScans = await TrustScanJob.countDocuments({
+      userId: req.user._id,
+      createdAt: { $gte: oneHourAgo }
+    });
+
+    if (recentScans >= 5) {
+      return sendError(res, 429, "Rate limit exceeded: maximum 5 scans per hour");
+    }
+
+    // Check for duplicate scan (prevent duplicate processing)
+    const existingJob = await TrustScanJob.findOne({
+      userId: req.user._id,
+      normalizedDomain: normalized.normalizedDomain,
+      status: "running",
+      createdAt: { $gte: new Date(Date.now() - 30 * 1000) } // within last 30 seconds
+    });
+
+    if (existingJob) {
+      return sendError(res, 409, "A scan for this URL is already in progress");
+    }
+
     const now = new Date();
 
     const job = await TrustScanJob.create({
@@ -319,7 +342,8 @@ export const createTrustScan = async (req, res) => {
       etaSeconds: Math.ceil(MOCK_SCAN_DURATION_MS / 1000)
     }, 201, "TrustScan job created");
   } catch (error) {
-    return sendError(res, 500, error.message);
+    console.error("CREATE TRUSTSCAN ERROR:", error);
+    return sendError(res, 500, "Failed to create TrustScan job");
   }
 };
 
@@ -343,7 +367,7 @@ export const getTrustScanById = async (req, res) => {
     } catch (err) {
       console.error("TRUSTSCAN COMPLETE ERROR:", err);
       console.error(err.stack);
-      return res.status(500).json({ message: err.message });
+      return sendError(res, 500, "Failed to complete TrustScan job");
     }
 
     return sendSuccess(res, {
@@ -351,7 +375,8 @@ export const getTrustScanById = async (req, res) => {
       report: report ? report.toObject() : null
     });
   } catch (error) {
-    return sendError(res, 500, error.message);
+    console.error("TRUSTSCAN ERROR:", error);
+    return sendError(res, 500, "Failed to retrieve TrustScan results");
   }
 };
 

@@ -1,4 +1,8 @@
 import multer from "multer";
+import { fileTypeFromBuffer } from "file-type";
+import { mkdir, writeFile, unlink } from "fs/promises";
+import { randomUUID } from "crypto";
+import path from "path";
 
 const parsePositiveNumber = (rawValue, fallback) => {
   const parsed = Number(rawValue);
@@ -7,6 +11,7 @@ const parsePositiveNumber = (rawValue, fallback) => {
 
 const maxUploadMb = parsePositiveNumber(process.env.UPLOAD_MAX_FILE_SIZE_MB, 50);
 const maxUploadBytes = Math.floor(maxUploadMb * 1024 * 1024);
+const uploadsDir = path.resolve("uploads");
 
 const reportAllowedMimes = [
   "image/jpeg",
@@ -30,14 +35,7 @@ const createInvalidTypeError = (message) => {
   return error;
 };
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/");
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + "-" + file.originalname);
-  }
-});
+const memoryStorage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   if (reportAllowedMimes.includes(file.mimetype)) {
@@ -47,12 +45,6 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-export const upload = multer({
-  storage,
-  fileFilter,
-  limits: { fileSize: maxUploadBytes }
-});
-
 const imageOnlyFilter = (req, file, cb) => {
   if (imageAllowedMimes.includes(file.mimetype)) {
     cb(null, true);
@@ -61,8 +53,51 @@ const imageOnlyFilter = (req, file, cb) => {
   }
 };
 
+export const validateFile = async (file) => {
+  if (!file?.buffer) {
+    throw createInvalidTypeError("Invalid file type. File content is missing.");
+  }
+
+  const detectedType = await fileTypeFromBuffer(file.buffer);
+  const allowedMime = file.mimetype && (reportAllowedMimes.includes(file.mimetype) || imageAllowedMimes.includes(file.mimetype));
+
+  if (!detectedType || !allowedMime || ![...reportAllowedMimes, ...imageAllowedMimes].includes(detectedType.mime)) {
+    throw createInvalidTypeError("Invalid file type. Only image files and PDFs are allowed.");
+  }
+
+  return detectedType;
+};
+
+export const persistUploadedFile = async (file) => {
+  const detectedType = await validateFile(file);
+  const filename = `${randomUUID()}.${detectedType.ext}`;
+  const filePath = path.join(uploadsDir, filename);
+
+  await mkdir(uploadsDir, { recursive: true });
+  await writeFile(filePath, file.buffer);
+
+  return {
+    filename,
+    path: `/uploads/${filename}`,
+    filePath
+  };
+};
+
+export const deleteUploadedFile = async (filename) => {
+  if (!filename) return;
+
+  const filePath = path.join(uploadsDir, filename);
+  await unlink(filePath).catch(() => {});
+};
+
+export const upload = multer({
+  storage: memoryStorage,
+  fileFilter,
+  limits: { fileSize: maxUploadBytes }
+});
+
 export const uploadImageOnly = multer({
-  storage,
+  storage: memoryStorage,
   fileFilter: imageOnlyFilter,
   limits: { fileSize: maxUploadBytes }
 });

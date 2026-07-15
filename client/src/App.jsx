@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import AppRoutes from "./routes/AppRoutes";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { getAiServiceBaseUrl, getApiBaseUrl } from "./utils/runtimeConfig";
+import { bootstrapAuthSession } from "./utils/authBootstrap";
 
 const warmUrl = async (url) => {
   const controller = new AbortController();
@@ -29,7 +30,8 @@ export default function App() {
 
     Promise.allSettled([
       warmUrl(`${getApiBaseUrl()}/system/health`),
-      warmUrl(getAiServiceBaseUrl())
+      warmUrl(getAiServiceBaseUrl()),
+      bootstrapAuthSession()
     ]).finally(() => {
       if (isMounted) {
         setIsWarming(false);
