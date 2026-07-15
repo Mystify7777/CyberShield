@@ -168,7 +168,7 @@ describe("Auth Routes", () => {
     expect(mocks.bcryptCompare).toHaveBeenCalledWith("secret123", "hashed-password");
     expect(mocks.addXP).toHaveBeenCalledTimes(1);
     expect(mocks.addCoins).toHaveBeenCalledTimes(1);
-    expect(save).toHaveBeenCalledTimes(2);
+    expect(save).toHaveBeenCalledTimes(1);
     expect(mocks.userFindByIdAndUpdate).toHaveBeenCalledTimes(1);
   });
 
