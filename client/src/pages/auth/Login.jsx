@@ -36,11 +36,17 @@ export default function Login() {
       const sanitized = sanitizeObject(form);
       const { data } = await API.post("/auth/login", sanitized);
 
-      localStorage.setItem("user", JSON.stringify(data));
+      // API now returns { user, accessToken } instead of a flat user object.
+      // Flatten it back to { ...user, token } so every other consumer of the
+      // "user" localStorage key (api.js, PrivateRoute, Navbar, etc.) keeps
+      // working without needing to know about the new shape.
+      const flatUser = { ...data.user, token: data.accessToken };
+
+      localStorage.setItem("user", JSON.stringify(flatUser));
       toast.success("Login successful");
 
       // Redirect based on role
-      if (["ADMIN", "SUPER_ADMIN"].includes(data.role)) {
+      if (["ADMIN", "SUPER_ADMIN"].includes(flatUser.role)) {
         navigate("/admin");
       } else {
         navigate("/dashboard");

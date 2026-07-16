@@ -152,22 +152,29 @@ export const getMyReports = asyncHandler(async (req, res) => {
   const safeReports = items.map((report) => {
     const item = report.toObject();
     if (item.isSensitive) {
-      const { data, usedLegacy } = decrypt(item.description, {
-        source: "reportController.getMyReports",
-        recordId: String(report._id)
-      });
+      try {
+        const { data, usedLegacy } = decrypt(item.description, {
+          source: "reportController.getMyReports",
+          recordId: String(report._id)
+        });
 
-      item.description = data;
+        item.description = data;
 
-      if (usedLegacy) {
-        const reEncrypted = encrypt(data);
+        if (usedLegacy) {
+          const reEncrypted = encrypt(data);
 
-        if (report.description !== reEncrypted) {
-          report.description = reEncrypted;
-          report.save().catch((error) => {
-            console.error(`[ENCRYPTION] Lazy migration failed for report=${report._id}:`, error.message);
-          });
+          if (report.description !== reEncrypted) {
+            report.description = reEncrypted;
+            report.save().catch((error) => {
+              console.error(`[ENCRYPTION] Lazy migration failed for report=${report._id}:`, error.message);
+            });
+          }
         }
+      } catch (error) {
+        item.description = "[DECRYPTION_FAILED]";
+        item.decryptionError = true;
+
+        console.error(`[DECRYPTION_ERROR] Failed to decrypt report=${report._id}:`, error.message);
       }
     }
     return item;
