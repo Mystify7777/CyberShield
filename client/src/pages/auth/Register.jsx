@@ -9,7 +9,7 @@ const isValidEmail = (email) => {
 };
 
 const checkStrength = (password) => {
-  if (password.length < 8) return "Weak";
+  if (password.length < 6) return "Weak";
 
   let score = 0;
   if (/[A-Z]/.test(password)) score++;
@@ -47,8 +47,8 @@ export default function Register() {
       return;
     }
 
-    if (form.password.length < 8) {
-      toast.error("Password must be at least 8 characters");
+    if (form.password.length < 6) {
+      toast.error("Password must be at least 6 characters");
       return;
     }
 

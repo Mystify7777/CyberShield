@@ -33,7 +33,7 @@ export const protect = async (req, res, next) => {
   const token = extractBearerToken(req.headers.authorization);
 
   if (!token) {
-    return sendError(res, 401, "No token provided", undefined, "TOKEN_MISSING");
+    return sendError(res, 401, "No token provided", undefined, "AUTH_REQUIRED");
   }
 
   try {
@@ -58,7 +58,6 @@ export const protect = async (req, res, next) => {
       return sendError(res, 401, "Not authorized", undefined, "AUTH_REQUIRED");
     }
 
-    // Clean trust boundary semantics: fetch, validate, THEN assign to request
     const user = await User.findById(decoded.id).select("-password");
 
     if (!user) {
@@ -75,7 +74,6 @@ export const protect = async (req, res, next) => {
     // Only mutate the request object once validation is fully complete
     req.user = user;
     return next();
-
   } catch (error) {
     logWarn("AUTH_MIDDLEWARE", "Invalid token", {
       message: error.message,
@@ -125,12 +123,10 @@ export const optionalProtect = async (req, res, next) => {
 
       req.user = user;
     }
-  } catch (error) {
-    // Closes the observability blind spot while keeping the endpoint public
-    logWarn("AUTH_MIDDLEWARE", "Optional auth token invalid", {
-      message: error.message,
-    });
-  }
 
-  return next();
+    return next();
+  } catch (error) {
+    // Keep endpoint public even if token is invalid.
+    return next();
+  }
 };

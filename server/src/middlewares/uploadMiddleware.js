@@ -1,8 +1,4 @@
 import multer from "multer";
-import { fileTypeFromBuffer } from "file-type";
-import { mkdir, writeFile, unlink } from "fs/promises";
-import { randomUUID } from "crypto";
-import path from "path";
 
 const parsePositiveNumber = (rawValue, fallback) => {
   const parsed = Number(rawValue);
@@ -45,7 +41,14 @@ const createInvalidTypeError = (message) => {
   return error;
 };
 
-const memoryStorage = multer.memoryStorage();
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/");
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + "-" + file.originalname);
+  }
+});
 
 const fileFilter = (req, file, cb) => {
   if (reportAllowedMimes.includes(file.mimetype)) {
@@ -54,6 +57,12 @@ const fileFilter = (req, file, cb) => {
     cb(createInvalidTypeError("Invalid file type. Only image files and PDFs are allowed."));
   }
 };
+
+export const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: maxUploadBytes }
+});
 
 const imageOnlyFilter = (req, file, cb) => {
   if (imageAllowedMimes.includes(file.mimetype)) {
@@ -137,7 +146,7 @@ export const upload = multer({
 });
 
 export const uploadImageOnly = multer({
-  storage: memoryStorage,
+  storage,
   fileFilter: imageOnlyFilter,
   limits: { fileSize: safeUploadBytes } // Used safe bytes here
 });

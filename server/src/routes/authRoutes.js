@@ -1,7 +1,6 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
 import { body } from "express-validator";
-
 import {
   registerUser,
   loginUser,
@@ -9,9 +8,7 @@ import {
   resendOTP,
   forgotPassword,
   resetPassword,
-  validateToken,
-  refreshSession,
-  logoutUser
+  validateToken
 } from "../controllers/authController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
@@ -34,60 +31,24 @@ const authForgotPasswordWindowMs = parsePositiveNumber(process.env.AUTH_FORGOT_P
 const authForgotPasswordMax = parsePositiveNumber(process.env.AUTH_FORGOT_PASSWORD_MAX, 5);
 const authResetPasswordWindowMs = parsePositiveNumber(process.env.AUTH_RESET_PASSWORD_WINDOW_MS, 60 * 60 * 1000);
 const authResetPasswordMax = parsePositiveNumber(process.env.AUTH_RESET_PASSWORD_MAX, 5);
-const authRefreshWindowMs = parsePositiveNumber(
-  process.env.AUTH_REFRESH_WINDOW_MS,
-  5 * 60 * 1000
-);
 
-const authRefreshMax = parsePositiveNumber(
-  process.env.AUTH_REFRESH_MAX,
-  30
-);
-
-// ─────────────────────────────────────────────
-// CUSTOM RATE LIMIT FACTORY
-// ─────────────────────────────────────────────
-const createAuthLimiter = (
-  windowMs,
-  max,
-  actionLabel,
-  options = {}
-) => rateLimit({
+const createAuthLimiter = (windowMs, max, actionLabel) => rateLimit({
   windowMs,
   max,
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: options.skipSuccessfulRequests || false,
   message: {
     success: false,
-    // Formats "OTP resend" -> "OTP_RESEND_RATE_LIMIT"
-    code: `${actionLabel.toUpperCase().replace(/\s+/g, "_")}_RATE_LIMIT`,
     message: `Too many ${actionLabel} attempts. Please try again later.`
   }
 });
 
 const registerLimiter = createAuthLimiter(authRegisterWindowMs, authRegisterMax, "registration");
-const loginLimiter = createAuthLimiter(
-  authLoginWindowMs,
-  authLoginMax,
-  "login",
-  { skipSuccessfulRequests: true }
-);
+const loginLimiter = createAuthLimiter(authLoginWindowMs, authLoginMax, "login");
 const resendOtpLimiter = createAuthLimiter(authResendOtpWindowMs, authResendOtpMax, "OTP resend");
-const verifyOtpLimiter = createAuthLimiter(
-  authVerifyOtpWindowMs,
-  authVerifyOtpMax,
-  "OTP verification",
-  { skipSuccessfulRequests: true }
-);
+const verifyOtpLimiter = createAuthLimiter(authVerifyOtpWindowMs, authVerifyOtpMax, "OTP verification");
 const forgotPasswordLimiter = createAuthLimiter(authForgotPasswordWindowMs, authForgotPasswordMax, "password reset request");
 const resetPasswordLimiter = createAuthLimiter(authResetPasswordWindowMs, authResetPasswordMax, "password reset");
-const refreshLimiter = createAuthLimiter(
-  authRefreshWindowMs,
-  authRefreshMax,
-  "refresh",
-  { skipSuccessfulRequests: true }
-);
 
 const emailChain = () => body("email")
   .isEmail()
@@ -100,7 +61,7 @@ router.post(
   [
     body("name").trim().escape().notEmpty().withMessage("Name is required"),
     emailChain(),
-    body("password").isLength({ min: 8 }).withMessage("Password must be at least 8 characters")
+    body("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters")
   ],
   registerUser
 );
@@ -155,18 +116,12 @@ router.post(
       .notEmpty()
       .withMessage("Reset token required"),
     body("newPassword")
-      .isLength({ min: 8 })
-      .withMessage("New password must be at least 8 characters")
+      .isLength({ min: 6 })
+      .withMessage("New password must be at least 6 characters")
   ],
   resetPassword
 );
 
-router.post(
-  "/refresh",
-  refreshLimiter,
-  refreshSession
-);
-router.post("/logout", logoutUser);
 router.get("/validate", protect, validateToken);
 
 export default router;

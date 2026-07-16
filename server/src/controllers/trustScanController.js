@@ -387,7 +387,7 @@ export const getTrustScanById = asyncHandler(async (req, res) => {
     } catch (err) {
       console.error("TRUSTSCAN COMPLETE ERROR:", err);
       console.error(err.stack);
-      return sendError(res, 500, "Failed to complete TrustScan job");
+      return res.status(500).json({ message: err.message });
     }
 
     return sendSuccess(res, {
@@ -396,10 +396,7 @@ export const getTrustScanById = asyncHandler(async (req, res) => {
     });
   } catch (error) {
     console.error("TRUSTSCAN ERROR:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message
-    });
+    return sendError(res, 500, error.message);
   }
 });
 

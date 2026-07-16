@@ -2,27 +2,6 @@ const DEBUG_REQUEST_LOGS = String(process.env.DEBUG_REQUEST_LOGS || "false").toL
 
 export const isDebugLogsEnabled = () => DEBUG_REQUEST_LOGS;
 
-const formatMeta = (meta) => {
-  if (meta instanceof Error) {
-    return {
-      name: meta.name,
-      message: meta.message,
-      stack: DEBUG_REQUEST_LOGS ? meta.stack : undefined,
-    };
-  }
-
-  return meta;
-};
-
-const emitLog = (method, scope, message, meta = undefined) => {
-  if (meta !== undefined) {
-    console[method](`[${scope}] ${message}`, formatMeta(meta));
-    return;
-  }
-
-  console[method](`[${scope}] ${message}`);
-};
-
 export const maskEmail = (email) => {
   const value = String(email || "").trim();
   const [localPart, domain] = value.split("@");
@@ -43,17 +22,28 @@ export const logInfo = (scope, message, meta = undefined) => {
     return;
   }
 
-  emitLog("log", scope, message, meta);
-};
+  if (meta) {
+    console.log(`[${scope}] ${message}`, meta);
+    return;
+  }
 
-export const logStatus = (scope, message, meta = undefined) => {
-  emitLog("log", scope, message, meta);
+  console.log(`[${scope}] ${message}`);
 };
 
 export const logWarn = (scope, message, meta = undefined) => {
-  emitLog("warn", scope, message, meta);
+  if (meta) {
+    console.warn(`[${scope}] ${message}`, meta);
+    return;
+  }
+
+  console.warn(`[${scope}] ${message}`);
 };
 
 export const logError = (scope, message, meta = undefined) => {
-  emitLog("error", scope, message, meta);
+  if (meta) {
+    console.error(`[${scope}] ${message}`, meta);
+    return;
+  }
+
+  console.error(`[${scope}] ${message}`);
 };

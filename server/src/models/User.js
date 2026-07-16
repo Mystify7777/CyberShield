@@ -9,8 +9,7 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
-      unique: true,
-      index: true
+      unique: true
     },
     password: {
       type: String,
@@ -19,19 +18,17 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: ["USER", "ADMIN", "SUPER_ADMIN"],
-      default: "USER",
-      index: true
+      default: "USER"
     },
     isSuspended: {
       type: Boolean,
-      default: false,
-      index: true
+      default: false
     },
     isVerified: {
       type: Boolean,
       default: false
     },
-    verificationOTPHash: {
+    verificationOTP: {
       type: String
     },
     otpExpires: {
@@ -82,11 +79,6 @@ const userSchema = new mongoose.Schema(
     lastCoinReset: {
       type: Date,
       default: Date.now
-    },
-    refreshTokenVersion: {
-      type: Number,
-      default: 0,
-      min: 0
     },
     lastActions: {
       game: {

@@ -1,14 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import Navbar from "../../components/layout/Navbar";
 import PhishingQuestionCard from "../../components/games/PhishingQuestionCard";
+import { phishingQuestions } from "../../data/phishingQuestions";
 import API from "../../services/api";
 import { syncUserCoins } from "../../utils/economySync";
 
 export default function PhishingGame() {
-  const [questions, setQuestions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [index, setIndex] = useState(0);
   const [feedback, setFeedback] = useState(null);
   const [score, setScore] = useState(0);
@@ -16,63 +14,28 @@ export default function PhishingGame() {
   const [completed, setCompleted] = useState(false);
   const [processing, setProcessing] = useState(false);
 
-  // Fetch questions from server on mount
-  useEffect(() => {
-    const fetchQuestions = async () => {
-      try {
-        setLoading(true);
-        const response = await API.get("/game/questions");
-        setQuestions(response.data.questions || []);
-        setError(null);
-      } catch (err) {
-        setError("Failed to load questions. Please try again.");
-        toast.error("Could not load phishing questions");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchQuestions();
-  }, []);
-
+  const questions = useMemo(() => phishingQuestions, []);
   const current = questions[index];
 
   const handleAnswer = async (choice) => {
     if (!current || processing || feedback) return;
 
-    // Client-side check: compare user's choice to the submitted answer
-    // But the actual validation happens server-side!
+    const correct = choice === current.answer;
     setAttempts((prev) => prev + 1);
     setFeedback({
-      correct: false, // Will be updated after server validation
+      correct,
       explanation: current.explanation
     });
 
+    if (!correct) return;
+
+    setScore((prev) => prev + 1);
+
     try {
       setProcessing(true);
-      // Send questionId and the user's choice (answerId) to server
-      // Server validates against authoritative answers
-      const response = await API.post("/game/reward", {
-        questionId: current.id,
-        answerId: choice
-      });
-
-      // Check if server validated the answer as correct
-      if (response.data.rewarded) {
-        setScore((prev) => prev + 1);
-        setFeedback({
-          correct: true,
-          explanation: current.explanation
-        });
-        await syncUserCoins();
-        toast.success("Great catch! Rewards added.");
-      } else {
-        // Answer was incorrect (server-validated)
-        setFeedback({
-          correct: false,
-          explanation: current.explanation
-        });
-      }
+      await API.post("/game/reward", { correct: true });
+      await syncUserCoins();
+      toast.success("Great catch! Rewards added.");
     } catch (error) {
       const message = error?.response?.data?.message || "Reward could not be processed right now";
       toast.error(message);
@@ -100,28 +63,6 @@ export default function PhishingGame() {
   };
 
   const accuracy = attempts > 0 ? Math.round((score / attempts) * 100) : 0;
-
-  if (loading) {
-    return (
-      <>
-        <Navbar />
-        <div className="max-w-4xl mx-auto p-4 sm:p-6">
-          <div className="text-center text-gray-500">Loading questions...</div>
-        </div>
-      </>
-    );
-  }
-
-  if (error) {
-    return (
-      <>
-        <Navbar />
-        <div className="max-w-4xl mx-auto p-4 sm:p-6">
-          <div className="text-center text-red-600">{error}</div>
-        </div>
-      </>
-    );
-  }
 
   return (
     <>

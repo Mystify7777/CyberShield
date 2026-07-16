@@ -43,7 +43,7 @@ export default function Articles() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user") || "null");
-  const isAuthenticated = Boolean(user);
+  const isAuthenticated = Boolean(user?.token);
   const currentUserId = user?._id;
 
   const iconMap = {

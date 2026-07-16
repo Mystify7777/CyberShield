@@ -87,56 +87,33 @@ export const addCoins = async (userId, action) => {
   applyActionCooldown(user, action);
 
   const toAdd = Number(COIN_RULES[action] || 0);
-  const currentDailyCoins = Number(user.dailyCoins || 0);
-  const remainingDaily = Math.max(0, DAILY_COIN_CAP - currentDailyCoins);
-
-  if (toAdd <= 0 || remainingDaily <= 0) {
-    return User.findByIdAndUpdate(
-      userId,
-      {
-        $set: {
-          dailyCoins: currentDailyCoins,
-          lastCoinReset: user.lastCoinReset,
-          lastActions: user.lastActions
-        }
-      },
-      { returnDocument: "after" }
-    );
+  if (toAdd <= 0) {
+    await user.save();
+    return user;
   }
 
-  const progress = Math.min(1, currentDailyCoins / DAILY_COIN_CAP);
+  user.dailyCoins = Number(user.dailyCoins || 0);
+  const remainingDaily = Math.max(0, DAILY_COIN_CAP - user.dailyCoins);
+
+  if (remainingDaily <= 0) {
+    await user.save();
+    return user;
+  }
+
+  const progress = Math.min(1, user.dailyCoins / DAILY_COIN_CAP);
   const diminishingMultiplier = Math.max(0.2, 1 - progress * 0.8);
   const adjusted = Math.floor(toAdd * diminishingMultiplier);
   const finalReward = Math.min(remainingDaily, adjusted);
 
   if (finalReward <= 0) {
-    return User.findByIdAndUpdate(
-      userId,
-      {
-        $set: {
-          dailyCoins: currentDailyCoins,
-          lastCoinReset: user.lastCoinReset,
-          lastActions: user.lastActions
-        }
-      },
-      { returnDocument: "after" }
-    );
+    await user.save();
+    return user;
   }
 
-  return User.findByIdAndUpdate(
-    userId,
-    {
-      $inc: {
-        coins: finalReward,
-        dailyCoins: finalReward
-      },
-      $set: {
-        lastCoinReset: user.lastCoinReset,
-        lastActions: user.lastActions
-      }
-    },
-    { returnDocument: "after" }
-  );
+  user.coins = Number(user.coins || 0) + finalReward;
+  user.dailyCoins += finalReward;
+  await user.save();
+  return user;
 };
 
 export const spendCoins = async (userId, action) => {
@@ -150,59 +127,16 @@ export const spendCoins = async (userId, action) => {
 
   const cost = Number(COST_RULES[action] || 0);
   if (cost <= 0) {
-    return User.findByIdAndUpdate(
-      userId,
-      {
-        $set: {
-          dailyCoins: Number(user.dailyCoins || 0),
-          lastCoinReset: user.lastCoinReset,
-          lastActions: user.lastActions
-        }
-      },
-      { returnDocument: "after" }
-    );
+    await user.save();
+    return user;
   }
 
-  const updatedUser = await User.findOneAndUpdate(
-    { _id: userId, coins: { $gte: cost } },
-    {
-      $inc: { coins: -cost },
-      $set: {
-        lastCoinReset: user.lastCoinReset,
-        lastActions: user.lastActions
-      }
-    },
-    { returnDocument: "after" }
-  );
-
-  if (!updatedUser) {
+  user.coins = Number(user.coins || 0);
+  if (user.coins < cost) {
     throw new Error("Not enough coins");
   }
 
-  return updatedUser;
+  user.coins -= cost;
+  await user.save();
+  return user;
 };
-
-// export const spendCoins = async (userId, action) => {
-//   if (!userId) throw new Error("User is required");
-
-//   const user = await User.findById(userId);
-//   if (!user) throw new Error("User not found");
-
-//   resetDailyCoinsIfNeeded(user);
-//   applyActionCooldown(user, action);
-
-//   const cost = Number(COST_RULES[action] || 0);
-//   if (cost <= 0) {
-//     await user.save();
-//     return user;
-//   }
-
-//   user.coins = Number(user.coins || 0);
-//   if (user.coins < cost) {
-//     throw new Error("Not enough coins");
-//   }
-
-//   user.coins -= cost;
-//   await user.save();
-//   return user;
-// };

@@ -56,6 +56,7 @@ export const createReport = asyncHandler(async (req, res) => {
       isAnonymous,
       isSensitive
     } = req.body;
+    const evidencePath = req.file ? `/uploads/${req.file.filename}` : null;
     const anonymousFlag = isAnonymous === true || isAnonymous === "true";
     const sensitiveFlag = isSensitive === true || isSensitive === "true";
     const safeDescription = sensitiveFlag ? encrypt(description) : description;

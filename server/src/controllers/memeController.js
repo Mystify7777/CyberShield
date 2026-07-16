@@ -20,18 +20,14 @@ export const createMeme = asyncHandler(async (req, res) => {
       return sendError(res, 400, "Meme image is required");
     }
 
-    await validateFile(req.file);
-    const savedImage = await persistUploadedFile(req.file);
-
     try {
       await spendCoins(req.user._id, "MEME_UPLOAD");
     } catch (economyError) {
-      await deleteUploadedFile(savedImage.filename);
       return sendError(res, 400, economyError.message);
     }
 
     const meme = await Meme.create({
-      image: savedImage.path,
+      image: `/uploads/${req.file.filename}`,
       caption: req.body.caption,
       category: req.body.category || "FUN",
       createdBy: req.user._id
