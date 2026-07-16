@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
@@ -111,6 +112,7 @@ app.use((req, res, next) => {
 
 // Standard Middleware
 app.use(express.json());
+app.use(cookieParser());
 app.use(morgan("dev"));
 if (isDebugLogsEnabled()) {
 	app.use((req, res, next) => {

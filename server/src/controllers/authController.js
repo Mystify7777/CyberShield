@@ -1,17 +1,17 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import jwt from "jsonwebtoken"; // TODO: confirm this is the correct import in your codebase
+import jwt from "jsonwebtoken";
 import {
   generateToken,
-  generateRefreshToken, // TODO: confirm this export exists in generateToken.js
+  generateRefreshToken,
 } from "../utils/generateToken.js";
 import {
   setRefreshTokenCookie,
   clearRefreshTokenCookie,
   getRefreshTokenFromRequest,
-} from "../utils/cookies.js"; // TODO: confirm actual path/filename for these cookie helpers
-import { asyncHandler } from "../middleware/asyncHandler.js"; // TODO: confirm actual path/filename
+} from "../utils/cookies.js";
+import asyncHandler from "../utils/asyncHandler.js";
 import { validationResult } from "express-validator";
 import { sendError, sendSuccess } from "../utils/response.js";
 import { sendEmail } from "../utils/sendEmail.js";

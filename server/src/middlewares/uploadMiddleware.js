@@ -1,4 +1,8 @@
 import multer from "multer";
+import path from "path";
+import { randomUUID } from "crypto";
+import { mkdir, writeFile, unlink } from "fs/promises";
+import { fileTypeFromBuffer } from "file-type";
 
 const parsePositiveNumber = (rawValue, fallback) => {
   const parsed = Number(rawValue);
@@ -41,14 +45,10 @@ const createInvalidTypeError = (message) => {
   return error;
 };
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/");
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + "-" + file.originalname);
-  }
-});
+// Both `upload` and `uploadImageOnly` use memory storage: validateFile/persistUploadedFile
+// operate on file.buffer (they re-detect the real file type and write it to disk themselves),
+// so multer must not write to disk on its own.
+const memoryStorage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   if (reportAllowedMimes.includes(file.mimetype)) {
@@ -57,12 +57,6 @@ const fileFilter = (req, file, cb) => {
     cb(createInvalidTypeError("Invalid file type. Only image files and PDFs are allowed."));
   }
 };
-
-export const upload = multer({
-  storage,
-  fileFilter,
-  limits: { fileSize: maxUploadBytes }
-});
 
 const imageOnlyFilter = (req, file, cb) => {
   if (imageAllowedMimes.includes(file.mimetype)) {
@@ -108,7 +102,7 @@ export const persistUploadedFile = async (file) => {
   const filePath = path.join(uploadsDir, filename);
 
   await mkdir(uploadsDir, { recursive: true });
-  
+
   // ─────────────────────────────────────────────
   // PRIORITY 5: Add File Persistence Write Flag
   // ─────────────────────────────────────────────
@@ -127,7 +121,7 @@ export const deleteUploadedFile = async (filename) => {
   if (!filename) return;
 
   const filePath = path.join(uploadsDir, filename);
-  
+
   // ─────────────────────────────────────────────
   // PRIORITY 3: Improve Silent Delete Failure Visibility
   // ─────────────────────────────────────────────
@@ -142,11 +136,11 @@ export const deleteUploadedFile = async (filename) => {
 export const upload = multer({
   storage: memoryStorage,
   fileFilter,
-  limits: { fileSize: safeUploadBytes } // Used safe bytes here
+  limits: { fileSize: safeUploadBytes }
 });
 
 export const uploadImageOnly = multer({
-  storage,
+  storage: memoryStorage,
   fileFilter: imageOnlyFilter,
-  limits: { fileSize: safeUploadBytes } // Used safe bytes here
+  limits: { fileSize: safeUploadBytes }
 });

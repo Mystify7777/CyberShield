@@ -11,7 +11,7 @@ export const sendSuccess = (res, data, statusCode = 200, message) => {
   return res.status(statusCode).json(payload);
 };
 
-export const sendError = (res, statusCode, message, errors) => {
+export const sendError = (res, statusCode, message, errors, code) => {
   const payload = {
     success: false,
     message
@@ -19,6 +19,10 @@ export const sendError = (res, statusCode, message, errors) => {
 
   if (errors) {
     payload.errors = errors;
+  }
+
+  if (code) {
+    payload.code = code;
   }
 
   return res.status(statusCode).json(payload);

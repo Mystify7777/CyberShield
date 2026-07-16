@@ -16,8 +16,11 @@ export const errorHandler = (err, req, res, next) => {
     });
   }
 
-  res.status(res.statusCode || 500).json({
+  const statusCode = err.status || err.statusCode || (res.statusCode !== 200 ? res.statusCode : 500);
+
+  res.status(statusCode).json({
     success: false,
-    message: err.message || "Server Error"
+    message: err.message || "Server Error",
+    ...(err.type ? { code: err.type } : {})
   });
 };

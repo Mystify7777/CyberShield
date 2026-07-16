@@ -47,6 +47,10 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
+    refreshTokenVersion: {
+      type: Number,
+      default: 0
+    },
     alias: {
       type: String,
       unique: true,

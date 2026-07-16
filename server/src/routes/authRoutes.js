@@ -8,7 +8,9 @@ import {
   resendOTP,
   forgotPassword,
   resetPassword,
-  validateToken
+  validateToken,
+  refreshSession,
+  logoutUser
 } from "../controllers/authController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
@@ -123,5 +125,8 @@ router.post(
 );
 
 router.get("/validate", protect, validateToken);
+
+router.post("/refresh", refreshSession);
+router.post("/logout", logoutUser);
 
 export default router;
