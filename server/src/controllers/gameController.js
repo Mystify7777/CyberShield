@@ -24,7 +24,7 @@ export const rewardGame = asyncHandler(async (req, res) => {
   // Validate that the submitted answer is correct server-side
   const validation = validateAnswer(questionId, answerId);
   if (!validation.valid) {
-    return sendSuccess(res, { rewarded: false }, 200, validation.error);
+    return sendSuccess(res, { rewarded: false, explanation: validation.explanation }, 200, validation.error);
   }
 
   const user = await User.findById(req.user._id);
@@ -51,5 +51,5 @@ export const rewardGame = asyncHandler(async (req, res) => {
     // XP should still count even if coins are blocked by economy controls.
   }
 
-  return sendSuccess(res, { rewarded: true }, 200, "Reward processed");
+  return sendSuccess(res, { rewarded: true, explanation: validation.explanation }, 200, "Reward processed");
 });

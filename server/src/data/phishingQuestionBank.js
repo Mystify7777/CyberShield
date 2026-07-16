@@ -130,8 +130,8 @@ export const validateAnswer = (questionId, answerId) => {
   }
 
   if (answerId !== question.correctOptionId) {
-    return { valid: false, error: question.explanation || "Incorrect answer" };
+    return { valid: false, error: question.explanation || "Incorrect answer", explanation: question.explanation };
   }
 
-  return { valid: true };
+  return { valid: true, explanation: question.explanation };
 };

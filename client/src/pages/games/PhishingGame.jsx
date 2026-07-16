@@ -1,12 +1,17 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import Navbar from "../../components/layout/Navbar";
 import PhishingQuestionCard from "../../components/games/PhishingQuestionCard";
-import { phishingQuestions } from "../../data/phishingQuestions";
+import PageState from "../../components/ui/PageState";
+import Loader from "../../components/ui/Loader";
 import API from "../../services/api";
 import { syncUserCoins } from "../../utils/economySync";
 
 export default function PhishingGame() {
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
   const [index, setIndex] = useState(0);
   const [feedback, setFeedback] = useState(null);
   const [score, setScore] = useState(0);
@@ -14,31 +19,56 @@ export default function PhishingGame() {
   const [completed, setCompleted] = useState(false);
   const [processing, setProcessing] = useState(false);
 
-  const questions = useMemo(() => phishingQuestions, []);
+  useEffect(() => {
+    loadQuestions();
+  }, []);
+
+  const loadQuestions = async () => {
+    try {
+      setLoadError("");
+      setLoading(true);
+      const { data } = await API.get("/game/questions");
+      setQuestions(data.questions || []);
+    } catch (error) {
+      setLoadError(error.response?.data?.message || "Could not load questions");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const current = questions[index];
 
-  const handleAnswer = async (choice) => {
+  // The server is the source of truth for correctness — it never sends us
+  // the correct option up front, so we submit the chosen answerId and let
+  // /game/reward tell us whether it was right (and reward XP/coins itself).
+  const handleAnswer = async (answerId) => {
     if (!current || processing || feedback) return;
 
-    const correct = choice === current.answer;
     setAttempts((prev) => prev + 1);
-    setFeedback({
-      correct,
-      explanation: current.explanation
-    });
-
-    if (!correct) return;
-
-    setScore((prev) => prev + 1);
+    setProcessing(true);
 
     try {
-      setProcessing(true);
-      await API.post("/game/reward", { correct: true });
-      await syncUserCoins();
-      toast.success("Great catch! Rewards added.");
+      const { data } = await API.post("/game/reward", {
+        questionId: current.id,
+        answerId
+      });
+
+      const correct = Boolean(data.rewarded);
+
+      setFeedback({
+        correct,
+        explanation: data.explanation
+      });
+
+      if (correct) {
+        setScore((prev) => prev + 1);
+        toast.success("Great catch! Rewards added.");
+        await syncUserCoins();
+      }
     } catch (error) {
-      const message = error?.response?.data?.message || "Reward could not be processed right now";
+      const message = error.response?.data?.message || "Reward could not be processed right now";
       toast.error(message);
+      setAttempts((prev) => prev - 1);
     } finally {
       setProcessing(false);
     }
@@ -69,10 +99,20 @@ export default function PhishingGame() {
       <Navbar />
       <div className="max-w-4xl mx-auto p-4 sm:p-6">
         <p className="text-sm text-gray-500 mb-4">
-          Practice spotting scams. Choose SAFE or SCAM and learn from instant feedback.
+          Practice spotting scams. Pick the best answer and learn from instant feedback.
         </p>
 
-        {completed ? (
+        {loading ? (
+          <Loader label="Loading questions..." />
+        ) : loadError ? (
+          <PageState
+            variant="error"
+            title="Couldn't load the game"
+            description={loadError}
+            actionLabel="Try again"
+            onAction={loadQuestions}
+          />
+        ) : completed ? (
           <div className="max-w-2xl mx-auto card text-center">
             <h2 className="text-xl font-bold mb-2">Round Complete</h2>
             <p className="text-sm text-slate-600">You finished all {questions.length} questions.</p>
@@ -95,6 +135,7 @@ export default function PhishingGame() {
             onAnswer={handleAnswer}
             onNext={handleNext}
             score={score}
+            disabled={processing}
           />
         )}
       </div>

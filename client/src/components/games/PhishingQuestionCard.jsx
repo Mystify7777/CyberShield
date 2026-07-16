@@ -5,7 +5,8 @@ export default function PhishingQuestionCard({
   feedback,
   onAnswer,
   onNext,
-  score
+  score,
+  disabled
 }) {
   if (!question) return null;
 
@@ -19,17 +20,22 @@ export default function PhishingQuestionCard({
       <p className="text-sm text-slate-500 mb-2">Score: {score}</p>
 
       <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 mb-5">
-        <p className="text-slate-800">{question.text}</p>
+        <p className="text-slate-800">{question.prompt}</p>
       </div>
 
       {!feedback && (
-        <div className="flex flex-wrap gap-3 justify-center">
-          <button type="button" className="btn bg-emerald-600 hover:bg-emerald-700" onClick={() => onAnswer("SAFE")}>
-            SAFE
-          </button>
-          <button type="button" className="btn btn-danger" onClick={() => onAnswer("SCAM")}>
-            SCAM
-          </button>
+        <div className="flex flex-col gap-2">
+          {question.options.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className="w-full text-left rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-800 font-medium shadow-xs transition-all duration-200 hover:border-primary-500 hover:bg-primary-50 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+              onClick={() => onAnswer(option.id)}
+              disabled={disabled}
+            >
+              {option.text}
+            </button>
+          ))}
         </div>
       )}
 
@@ -39,7 +45,9 @@ export default function PhishingQuestionCard({
             {feedback.correct ? "Correct" : "Wrong"}
           </p>
 
-          <p className="text-sm mt-2 text-slate-600">{feedback.explanation}</p>
+          {feedback.explanation && (
+            <p className="text-sm mt-2 text-slate-600">{feedback.explanation}</p>
+          )}
 
           {feedback.correct && (
             <p className="text-emerald-600 text-xs mt-2">+XP and +Coins rewarded</p>
