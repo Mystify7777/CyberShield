@@ -93,7 +93,7 @@ export default function ForgotPassword() {
 
         <button
           type="button"
-          className="btn w-full mb-3"
+          className="btn btn-primary w-full mb-3"
           onClick={requestToken}
           disabled={loadingRequest}
         >
