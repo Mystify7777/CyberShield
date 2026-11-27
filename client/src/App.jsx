@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import AppRoutes from "./routes/AppRoutes";
 import ErrorBoundary from "./components/ErrorBoundary";
-import { getAiServiceBaseUrl, getApiBaseUrl } from "./utils/runtimeConfig";
+import { getApiBaseUrl } from "./utils/runtimeConfig";
 
 const warmUrl = async (url) => {
   const controller = new AbortController();
@@ -27,9 +27,11 @@ export default function App() {
   useEffect(() => {
     let isMounted = true;
 
+    // The browser talks to the backend API, not the internal FastAPI service.
+    // AI requests are proxied through /api/ai/predict so the AI service URL
+    // remains a server-side deployment concern.
     Promise.allSettled([
-      warmUrl(`${getApiBaseUrl()}/system/health`),
-      warmUrl(getAiServiceBaseUrl())
+      warmUrl(`${getApiBaseUrl()}/system/health`)
     ]).finally(() => {
       if (isMounted) {
         setIsWarming(false);
