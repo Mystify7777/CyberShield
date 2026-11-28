@@ -100,6 +100,8 @@ const shouldSkipGlobalRateLimit = (req) => {
 app.use(helmet());
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
+// Parse request bodies before any middleware that inspects or mutates req.body.
+app.use(express.json());
 app.use(xssMiddleware);
 app.use(sanitizeMiddleware);
 app.use((req, res, next) => {
@@ -111,7 +113,6 @@ app.use((req, res, next) => {
 });
 
 // Standard Middleware
-app.use(express.json());
 app.use(cookieParser());
 app.use(morgan("dev"));
 if (isDebugLogsEnabled()) {
@@ -145,6 +146,15 @@ app.use("/api/trustscan", trustScanRoutes);
 
 app.get("/", (req, res) => {
 	res.send("API is running...");
+});
+
+// Keep API failures JSON-shaped even when no route matches.
+app.use((req, res) => {
+	res.status(404).json({
+		success: false,
+		message: "Route not found",
+		code: "ROUTE_NOT_FOUND"
+	});
 });
 
 app.use(errorHandler);
