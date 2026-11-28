@@ -148,6 +148,15 @@ app.get("/", (req, res) => {
 	res.send("API is running...");
 });
 
+// Keep API failures JSON-shaped even when no route matches.
+app.use((req, res) => {
+	res.status(404).json({
+		success: false,
+		message: "Route not found",
+		code: "ROUTE_NOT_FOUND"
+	});
+});
+
 app.use(errorHandler);
 
 export default app;
