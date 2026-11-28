@@ -168,6 +168,8 @@ describe("Auth Routes", () => {
       iss: "cybershield"
     });
     expect(res.headers["set-cookie"]?.join(";") || "").toContain("cybershield_refresh_token=");
+    expect(res.headers["set-cookie"]?.join(";") || "").toContain("HttpOnly");
+    expect(res.headers["set-cookie"]?.join(";") || "").toContain("Path=/api/auth");
     expect(mocks.bcryptCompare).toHaveBeenCalledWith("secret123", "hashed-password");
     expect(mocks.addXP).toHaveBeenCalledTimes(1);
     expect(mocks.addCoins).toHaveBeenCalledTimes(1);
@@ -225,6 +227,8 @@ describe("Auth Routes", () => {
       iss: "cybershield"
     });
     expect(refreshResponse.headers["set-cookie"]?.[0]).toContain("cybershield_refresh_token=");
+    expect(refreshResponse.headers["set-cookie"]?.[0]).toContain("HttpOnly");
+    expect(refreshResponse.headers["set-cookie"]?.[0]).toContain("Path=/api/auth");
     expect(refreshResponse.body.data.user).toMatchObject({
       _id: "user_3",
       email: "rita@example.com"
