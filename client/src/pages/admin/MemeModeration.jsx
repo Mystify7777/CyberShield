@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import AdminNavbar from "../../components/layout/AdminNavbar";
 import API from "../../services/api";
-
-const API_HOST = (import.meta.env.VITE_API_URL || "http://localhost:5000").replace(/\/+$/, "");
+import { getAssetUrl } from "../../utils/assetUrl";
 
 export default function MemeModeration() {
   const [memes, setMemes] = useState([]);
@@ -54,7 +53,7 @@ export default function MemeModeration() {
             {memes.map((meme) => (
               <div key={meme._id} className="card">
                 <img
-                  src={`${API_HOST}${meme.image}`}
+                  src={getAssetUrl(meme.image)}
                   alt={meme.caption || "Flagged meme"}
                   className="w-full h-72 object-cover rounded-sm mb-3"
                 />
