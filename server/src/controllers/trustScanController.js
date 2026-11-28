@@ -368,36 +368,22 @@ export const createTrustScan = asyncHandler(async (req, res) => {
 });
 
 export const getTrustScanById = asyncHandler(async (req, res) => {
-  try {
-    const job = await TrustScanJob.findOne({
-      _id: req.params.id,
-      userId: req.user._id
-    });
+  const job = await TrustScanJob.findOne({
+    _id: req.params.id,
+    userId: req.user._id
+  });
 
-    if (!job) {
-      return sendError(res, 404, "TrustScan job not found");
-    }
-
-    let updatedJob;
-    let report;
-
-    try {
-      updatedJob = await maybeAdvanceJobState(job);
-      report = await ensureReportForCompletedJob(updatedJob);
-    } catch (err) {
-      console.error("TRUSTSCAN COMPLETE ERROR:", err);
-      console.error(err.stack);
-      return res.status(500).json({ message: err.message });
-    }
-
-    return sendSuccess(res, {
-      job: updatedJob.toObject(),
-      report: report ? report.toObject() : null
-    });
-  } catch (error) {
-    console.error("TRUSTSCAN ERROR:", error);
-    return sendError(res, 500, error.message);
+  if (!job) {
+    return sendError(res, 404, "TrustScan job not found");
   }
+
+  const updatedJob = await maybeAdvanceJobState(job);
+  const report = await ensureReportForCompletedJob(updatedJob);
+
+  return sendSuccess(res, {
+    job: updatedJob.toObject(),
+    report: report ? report.toObject() : null
+  });
 });
 
 export const getTrustScanHistory = asyncHandler(async (req, res) => {
