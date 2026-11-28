@@ -1,4 +1,4 @@
-const REFRESH_TOKEN_COOKIE_NAME = "refreshToken";
+const REFRESH_TOKEN_COOKIE_NAME = "cybershield_refresh_token";
 const isProduction = process.env.NODE_ENV === "production";
 
 // Keep this in sync with JWT_REFRESH_EXPIRES_IN in utils/generateToken.js (default "7d").
