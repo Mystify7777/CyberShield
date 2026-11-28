@@ -100,6 +100,8 @@ const shouldSkipGlobalRateLimit = (req) => {
 app.use(helmet());
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
+// Parse request bodies before any middleware that inspects or mutates req.body.
+app.use(express.json());
 app.use(xssMiddleware);
 app.use(sanitizeMiddleware);
 app.use((req, res, next) => {
@@ -111,7 +113,6 @@ app.use((req, res, next) => {
 });
 
 // Standard Middleware
-app.use(express.json());
 app.use(cookieParser());
 app.use(morgan("dev"));
 if (isDebugLogsEnabled()) {
